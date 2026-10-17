@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ carrera.nombre }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('admin.carreras') }}">Carreras</a> › {{ carrera.codigo }}</p>
+<section class="tarjeta media">
+  <h1>{{ carrera.nombre }}</h1>
+  <form method="post">
+    {{ ui.csrf() }}
+    {% if usada %}<input type="hidden" name="codigo" value="{{ carrera.codigo }}">{% endif %}
+    {{ ui.campo('codigo', 'Código', datos, maximo=20, deshabilitado=usada,
+                ayuda='No se puede cambiar: la carrera ya tiene postulantes.' if usada else 'Es el que se escribe en los archivos de carga.') }}
+    {{ ui.campo('nombre', 'Nombre', datos, maximo=200) }}
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Guardar</button>
+      <a href="{{ url_for('admin.carreras') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

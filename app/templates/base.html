@@ -15,9 +15,12 @@
       {% if puede_ver_bandeja() %}<a href="{{ url_for('bandeja.ver') }}">Bandeja</a>{% endif %}
       {% if puede_iniciar() %}<a href="{{ url_for('iniciar.rut') }}">Iniciar proceso</a>{% endif %}
       <a href="{{ url_for('ficha.buscar') }}">Buscar postulante</a>
+      {% if puede_registrar() %}<a href="{{ url_for('postulantes.nuevo') }}">Registrar postulante</a>{% endif %}
+      {% if puede_editar_postulantes() %}<a href="{{ url_for('postulantes.carga') }}">Carga masiva</a>{% endif %}
       {% if g.usuario.rol == 'ADMIN' %}
       <a href="{{ url_for('admin.procesos') }}">Procesos</a>
       <a href="{{ url_for('admin.usuarios') }}">Usuarios</a>
+      <a href="{{ url_for('admin.carreras') }}">Carreras</a>
       {% endif %}
     </nav>
     {% endif %}

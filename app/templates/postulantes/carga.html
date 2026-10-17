@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Carga masiva{% endblock %}
+{% block contenido %}
+<section class="tarjeta media">
+  <h1>Carga masiva de postulantes</h1>
+  <p class="nota">Precarga los datos de los postulantes desde un archivo. <strong>No inicia procesos ni envía correos.</strong></p>
+  <h2>1. Descargue la plantilla</h2>
+  <p>Una fila por postulante, con estas columnas en cualquier orden:
+    <code>rut_postulante</code>, <code>nombres_postulante</code>, <code>apellidos_postulante</code>,
+    <code>telefono_postulante</code>, <code>correo_personal_postulante</code>, <code>carrera1_postulante</code>
+    y, opcionales, <code>carrera2_postulante</code> y <code>carrera3_postulante</code>.
+    Las carreras se escriben con su <strong>código</strong>: la plantilla Excel trae la hoja «Carreras» con el catálogo.</p>
+  <div class="acciones">
+    <a class="boton secundario" href="{{ url_for('postulantes.plantilla', formato='xlsx') }}">Plantilla Excel (.xlsx)</a>
+    <a class="boton secundario" href="{{ url_for('postulantes.plantilla', formato='csv') }}">Plantilla CSV</a>
+  </div>
+  <h2>2. Suba el archivo</h2>
+  <form method="post" action="{{ url_for('postulantes.carga_post') }}" enctype="multipart/form-data">
+    {{ ui.csrf() }}
+    <label for="archivo">Archivo .xlsx o .csv (hasta 10 MB y 20.000 filas)</label>
+    <input id="archivo" name="archivo" type="file" accept=".csv,.xlsx" required>
+    <small>CSV en UTF-8, separado por coma o punto y coma. Antes de guardar verá una vista previa.</small>
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Revisar archivo</button>
+    </div>
+  </form>
+  {% if proceso %}
+  <p class="nota">Los datos de quienes no inicien un proceso se eliminarán el {{ proceso.fecha_eliminacion.strftime('%d-%m-%Y') }}
+    (fecha de eliminación de {{ proceso.nombre }}).</p>
+  {% endif %}
+</section>
+{% endblock %}

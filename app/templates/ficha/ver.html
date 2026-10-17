@@ -12,6 +12,9 @@
     <div><dt>Carreras de interés</dt><dd>{{ carreras|join(', ') or '—' }}</dd></div>
   </dl>
   {% if not postulante.activo %}<p class="alerta-texto">⚠ Postulante desactivado</p>{% endif %}
+  {% if puede_editar_postulantes() %}
+  <a class="boton secundario" href="{{ url_for('postulantes.editar', postulante_id=postulante.id) }}">Editar datos</a>
+  {% endif %}
 </section>
 
 {% if not expedientes %}

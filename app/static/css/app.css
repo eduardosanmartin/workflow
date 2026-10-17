@@ -223,6 +223,7 @@ fieldset.sin-borde legend h2 { margin: 0 0 .25rem; }
   color: var(--info-texto); font-size: .85rem; text-align: center; vertical-align: middle; }
 .numero-fila { font-weight: 800; color: var(--primario); white-space: nowrap; }
 .sin-margen { margin: 0; }
+.sin-corte { white-space: nowrap; }
 .insignia-flujo { background: #f3e8ff; color: #4c1d95; }
 .paso-interrumpido { color: var(--texto-suave); text-decoration: line-through; }
 .aviso-casilla { background: var(--aviso-fondo); color: var(--aviso-texto); padding: .5rem .75rem; border-radius: 6px; }

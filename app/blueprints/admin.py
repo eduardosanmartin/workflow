@@ -1,9 +1,10 @@
-"""Pantallas de configuración del Administrador (§10, pantallas 8, 8b, 9 y 10)."""
+"""Pantallas de configuración del Administrador (§10, pantallas 8, 8b, 9, 10 y 13)."""
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from app import models as m
 from app.security import requiere_rol
+from app.services import catalogo
 from app.services import configuracion as cfg
 from app.services import workflow as wf
 
@@ -358,3 +359,71 @@ def usuario_restablecer(usuario_id):
     if not ok:
         return redirect(url_for("admin.usuarios"))
     return render_template("admin/clave_temporal.html", usuario=usuario, clave=clave, nuevo=False)
+
+
+# ── Catálogo de carreras (RF-25) ──
+
+def _carreras(datos=None, resultado=None, codigo=200):
+    return render_template("admin/carreras.html", filas=catalogo.listar(), datos=datos or {},
+                           resultado=resultado), codigo
+
+
+@bp.get("/carreras")
+def carreras():
+    return _carreras()
+
+
+@bp.post("/carreras")
+def carrera_nueva():
+    datos = _form()
+    carrera, ok = _ejecutar(catalogo.crear, datos, g.usuario)
+    if not ok:
+        return _carreras(datos, codigo=422)
+    flash(f"Carrera «{carrera.nombre}» ({carrera.codigo}) creada.", "exito")
+    return redirect(url_for("admin.carreras"))
+
+
+@bp.route("/carreras/<int:carrera_id>", methods=["GET", "POST"])
+def carrera(carrera_id):
+    carrera = _obtener(m.Carrera, carrera_id)
+    datos = {"codigo": carrera.codigo, "nombre": carrera.nombre}
+    if request.method == "POST":
+        datos = _form()
+        _, ok = _ejecutar(catalogo.editar, carrera.id, datos, g.usuario)
+        if ok:
+            flash("Carrera actualizada.", "exito")
+            return redirect(url_for("admin.carreras"))
+    return render_template("admin/carrera_form.html", carrera=carrera, datos=datos,
+                           usada=catalogo.usada(carrera.id))
+
+
+@bp.post("/carreras/<int:carrera_id>/estado")
+def carrera_estado(carrera_id):
+    activar = request.form.get("activo") == "1"
+    carrera, ok = _ejecutar(catalogo.cambiar_estado, carrera_id, activar, g.usuario)
+    if ok:
+        flash(f"Carrera «{carrera.nombre}» {'activada' if activar else 'desactivada'}.", "exito")
+    return redirect(url_for("admin.carreras"))
+
+
+@bp.post("/carreras/<int:carrera_id>/eliminar")
+def carrera_eliminar(carrera_id):
+    carrera = _obtener(m.Carrera, carrera_id)
+    _, ok = _ejecutar(catalogo.eliminar, carrera.id, g.usuario)
+    if ok:
+        flash(f"Carrera «{carrera.nombre}» eliminada.", "exito")
+    return redirect(url_for("admin.carreras"))
+
+
+@bp.post("/carreras/importar")
+def carreras_importar():
+    archivo = request.files.get("archivo")
+    if archivo is None or not archivo.filename:
+        flash("Elija un archivo .csv o .xlsx", "error")
+        return _carreras(codigo=422)
+    resultado, ok = _ejecutar(catalogo.importar, archivo.read(), archivo.filename, g.usuario)
+    if not ok:
+        return _carreras(codigo=422)
+    flash(f"Catálogo importado: {resultado['creadas']} nuevas, {resultado['actualizadas']} actualizadas, "
+          f"{resultado['sin_cambios']} sin cambios y {len(resultado['errores'])} con errores.", "exito")
+    return _carreras(resultado=resultado)

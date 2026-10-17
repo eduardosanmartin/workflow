@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Editar postulante{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Ficha</a> › Editar datos</p>
+<section class="tarjeta media">
+  <h1>Editar datos de {{ postulante.nombres }} {{ postulante.apellidos }}</h1>
+  <p>RUT <strong>{{ postulante.rut }}</strong></p>
+  <p class="nota">El RUT no se puede corregir. Si está mal, desactive este postulante y registre uno nuevo.</p>
+  <form method="post" action="{{ url_for('postulantes.editar_post', postulante_id=postulante.id) }}">
+    {{ ui.csrf() }}
+    {% include "postulantes/_campos.html" %}
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Guardar</button>
+      <a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+<section class="tarjeta media separada">
+  <h2>Estado</h2>
+  {% if postulante.activo %}
+  <p class="nota">Un postulante desactivado no puede iniciar procesos por ninguna vía.</p>
+  {{ ui.boton_post(url_for('postulantes.estado', postulante_id=postulante.id), 'Desactivar postulante', 'enlace-peligro',
+                   {'activo': '0'}, confirmar='¿Desactivar a ' ~ postulante.nombres ~ ' ' ~ postulante.apellidos ~ '?') }}
+  {% else %}
+  <p class="alerta-texto">⚠ Postulante desactivado</p>
+  {{ ui.boton_post(url_for('postulantes.estado', postulante_id=postulante.id), 'Activar postulante', 'secundario', {'activo': '1'}) }}
+  {% endif %}
+</section>
+{% endblock %}

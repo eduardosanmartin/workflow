@@ -1,0 +1,14 @@
+{# Datos de RF-06 para la carga manual y la edición #}
+{% import "_postulante.html" as p with context %}
+<div class="fila">
+  <div>{{ p.campo('nombres', 'Nombres', datos, errores, maximo=100) }}</div>
+  <div>{{ p.campo('apellidos', 'Apellidos', datos, errores, maximo=100) }}</div>
+  <div>{{ p.campo('telefono', 'Teléfono', datos, errores, tipo='tel', maximo=20) }}</div>
+  <div>{{ p.campo('correo_personal', 'Correo personal', datos, errores, tipo='email', maximo=254) }}</div>
+</div>
+<fieldset>
+  <legend>Carreras de interés (en orden de preferencia)</legend>
+  {{ p.carrera('carrera1', 'Carrera 1', datos, errores, carreras, requerido=True) }}
+  {{ p.carrera('carrera2', 'Carrera 2 (opcional)', datos, errores, carreras) }}
+  {{ p.carrera('carrera3', 'Carrera 3 (opcional, requiere la 2)', datos, errores, carreras) }}
+</fieldset>

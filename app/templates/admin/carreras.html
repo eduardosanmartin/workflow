@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Carreras{% endblock %}
+{% block contenido %}
+<h1>Catálogo de carreras</h1>
+<p class="nota">Se usa en todas las vías de registro. Las carreras con postulantes no se eliminan: se desactivan,
+  y dejan de aparecer en las listas, pero se siguen mostrando en quienes ya las tienen.</p>
+
+{% if resultado and resultado.errores %}
+<section class="tarjeta separada">
+  <h2>Filas no importadas ({{ resultado.errores|length }})</h2>
+  <ul>{% for fila, motivo in resultado.errores %}<li>Fila {{ fila }}: {{ motivo }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<section class="tarjeta separada">
+<div class="tabla-desplazable">
+<table class="tabla-apilable">
+  <thead><tr><th>Código</th><th>Nombre</th><th>Postulantes</th><th>Estado</th><th><span class="oculto">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for fila in filas %}
+  {% set c = fila.carrera %}
+  <tr class="{{ '' if c.activo else 'inactivo' }}">
+    <td><a href="{{ url_for('admin.carrera', carrera_id=c.id) }}"><strong>{{ c.codigo }}</strong></a></td>
+    <td data-etiqueta="Nombre">{{ c.nombre }}</td>
+    <td data-etiqueta="Postulantes">{{ fila.postulantes }}</td>
+    <td data-etiqueta="Estado">{{ 'Activa' if c.activo else 'Inactiva' }}</td>
+    <td class="acciones-fila">
+      {% if c.activo %}
+      {{ ui.boton_post(url_for('admin.carrera_estado', carrera_id=c.id), 'Desactivar', 'enlace-peligro', {'activo': '0'},
+                       confirmar='¿Desactivar ' ~ c.nombre ~ '? Dejará de aparecer en las listas.') }}
+      {% else %}
+      {{ ui.boton_post(url_for('admin.carrera_estado', carrera_id=c.id), 'Activar', 'enlace', {'activo': '1'}) }}
+      {% endif %}
+      {% if not fila.postulantes %}
+      {{ ui.boton_post(url_for('admin.carrera_eliminar', carrera_id=c.id), 'Eliminar', 'enlace-peligro',
+                       confirmar='¿Eliminar ' ~ c.nombre ~ '?') }}
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5">No hay carreras. Agréguelas o importe el catálogo.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</section>
+
+<div class="fila">
+<section class="tarjeta separada">
+  <h2>Nueva carrera</h2>
+  <form method="post" action="{{ url_for('admin.carrera_nueva') }}">
+    {{ ui.csrf() }}
+    {{ ui.campo('codigo', 'Código', datos, ayuda='Ej.: ENF. Es el que se escribe en los archivos de carga.', maximo=20) }}
+    {{ ui.campo('nombre', 'Nombre', datos, ayuda='Ej.: Enfermería', maximo=200) }}
+    <div class="acciones"><button type="submit" class="primario-corto">Agregar</button></div>
+  </form>
+</section>
+<section class="tarjeta separada">
+  <h2>Importar catálogo</h2>
+  <p class="nota">Archivo .csv o .xlsx con las columnas <code>codigo_carrera</code> y <code>nombre_carrera</code>.
+    Crea las carreras nuevas y actualiza el nombre de las existentes; no desactiva ni elimina ninguna.</p>
+  <form method="post" action="{{ url_for('admin.carreras_importar') }}" enctype="multipart/form-data">
+    {{ ui.csrf() }}
+    <label for="archivo">Archivo</label>
+    <input id="archivo" name="archivo" type="file" accept=".csv,.xlsx" required>
+    <div class="acciones"><button type="submit" class="primario-corto">Importar</button></div>
+  </form>
+</section>
+</div>
+{% endblock %}

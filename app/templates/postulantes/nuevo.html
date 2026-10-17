@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% import "_postulante.html" as p with context %}
+{% block titulo %}Registrar postulante{% endblock %}
+{% block contenido %}
+<section class="tarjeta media">
+  <h1>Registrar postulante</h1>
+  <p class="nota">Deja registrados sus datos sin iniciar su proceso: no se le asigna número de atención ni se le envía correo.
+    El proceso se inicia cuando llega a matrícula, desde «Iniciar proceso» o con el QR.</p>
+  {% if existente %}
+  <div class="mensaje mensaje-aviso" role="alert"><span class="icono" aria-hidden="true">⚠</span>
+    <span>El RUT {{ existente.rut }} ya está registrado a nombre de {{ existente.nombres }} {{ existente.apellidos }}.
+      <a href="{{ url_for('ficha.ver', postulante_id=existente.id) }}">Ver su ficha</a></span></div>
+  {% endif %}
+  <form method="post" action="{{ url_for('postulantes.nuevo_post') }}">
+    {{ ui.csrf() }}
+    {{ p.campo('rut', 'RUT', datos, errores, maximo=15) }}
+    <small>Con o sin puntos y guion. No se puede corregir después.</small>
+    {% include "postulantes/_campos.html" %}
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Registrar</button>
+      <a href="{{ url_for('principal.inicio') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

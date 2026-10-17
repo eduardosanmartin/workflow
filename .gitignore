@@ -8,3 +8,6 @@ __pycache__/
 ._*
 htmlcov/
 *.egg-info/
+
+# Cargas masivas pendientes (temporales, con datos personales)
+instance/

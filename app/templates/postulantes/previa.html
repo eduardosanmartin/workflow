@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Vista previa de la carga{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('postulantes.carga') }}">Carga masiva</a> › {{ archivo }}</p>
+<section class="tarjeta">
+  <h1>Vista previa: {{ archivo }}</h1>
+  <p>{{ total }} filas: <strong>{{ nuevos|length }} nuevos</strong>, <strong>{{ existentes|length }} ya registrados</strong>
+    y <strong>{{ errores|length }} con errores</strong>. Aún no se ha guardado nada.</p>
+  <form method="post" action="{{ url_for('postulantes.importar', token=token) }}" onsubmit="this.querySelector('[type=submit]').disabled = true">
+    {{ ui.csrf() }}
+    {% if existentes %}
+    <fieldset>
+      <legend>{% if existentes|length == 1 %}¿Qué hacer con el postulante ya registrado?{% else %}¿Qué hacer con los {{ existentes|length }} postulantes ya registrados?{% endif %}</legend>
+      {% for valor, texto in POLITICAS.items() %}
+      <label class="casilla"><input type="radio" name="politica" value="{{ valor }}" {% if loop.first %}checked{% endif %}> {{ texto }}</label>
+      {% endfor %}
+    </fieldset>
+    {% else %}
+    <input type="hidden" name="politica" value="NO_MODIFICAR">
+    {% endif %}
+    {% if errores %}<p class="nota">Las filas con errores no se importan; las demás sí.</p>{% endif %}
+    <div class="acciones">
+      <button type="submit" class="primario-corto" {% if not (nuevos or existentes) %}disabled{% endif %}>Importar</button>
+      <a href="{{ url_for('postulantes.carga') }}">Cancelar y subir otro archivo</a>
+    </div>
+  </form>
+</section>
+
+{% if errores %}
+<section class="tarjeta separada">
+  <div class="encabezado">
+    <h2>Con errores ({{ errores|length }})</h2>
+    <a class="boton secundario" href="{{ url_for('postulantes.errores_csv', token=token) }}">Descargar errores (CSV)</a>
+  </div>
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>Fila</th><th>RUT</th><th>Motivo</th></tr></thead>
+    <tbody>
+    {% for e in errores[:mostrar] %}
+    <tr><td class="sin-corte">Fila {{ e.fila }}</td><td class="sin-corte" data-etiqueta="RUT">{{ e.rut or '—' }}</td><td data-etiqueta="Motivo">{{ e.motivo }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if errores|length > mostrar %}<p class="nota">Se muestran las primeras {{ mostrar }}. Descargue el CSV para verlas todas.</p>{% endif %}
+</section>
+{% endif %}
+
+{% if existentes %}
+<section class="tarjeta separada">
+  <h2>Ya registrados ({{ existentes|length }})</h2>
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>Fila</th><th>RUT</th><th>Nombre</th><th>Datos que cambiarían al sobrescribir</th></tr></thead>
+    <tbody>
+    {% for e in existentes[:mostrar] %}
+    <tr>
+      <td class="sin-corte">Fila {{ e.fila }}</td>
+      <td class="sin-corte" data-etiqueta="RUT">{{ e.rut }}</td>
+      <td data-etiqueta="Nombre"><a href="{{ url_for('ficha.ver', postulante_id=e.postulante.id) }}">{{ e.nombre }}</a></td>
+      <td data-etiqueta="Cambios">
+        {% for campo, cambio in e.cambios.items() %}
+        <div>{{ ETIQUETAS[campo] }}: <del>{{ cambio[0] or '(vacío)' }}</del> → {{ cambio[1] or '(vacío)' }}{% if campo in e.completar %} <small>(también al completar)</small>{% endif %}</div>
+        {% else %}Sin cambios{% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if existentes|length > mostrar %}<p class="nota">Se muestran los primeros {{ mostrar }}.</p>{% endif %}
+</section>
+{% endif %}
+
+{% if nuevos %}
+<section class="tarjeta separada">
+  <h2>Nuevos ({{ nuevos|length }})</h2>
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>Fila</th><th>RUT</th><th>Nombre</th><th>Correo</th><th>Carreras</th></tr></thead>
+    <tbody>
+    {% for n in nuevos[:mostrar] %}
+    <tr>
+      <td class="sin-corte">Fila {{ n.fila }}</td>
+      <td class="sin-corte" data-etiqueta="RUT">{{ n.rut }}</td>
+      <td data-etiqueta="Nombre">{{ n.nombre }}</td>
+      <td data-etiqueta="Correo">{{ n.datos.correo_personal }}</td>
+      <td data-etiqueta="Carreras">{{ [n.datos.carrera1, n.datos.carrera2, n.datos.carrera3]|select|join(', ') }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if nuevos|length > mostrar %}<p class="nota">Se muestran los primeros {{ mostrar }}.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

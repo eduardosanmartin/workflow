@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titulo %}Carga importada{% endblock %}
+{% block contenido %}
+<section class="tarjeta media">
+  <h1>Carga importada</h1>
+  <p>{{ carga.nombre_archivo }} · {{ carga.total_filas }} filas · existentes: {{ POLITICAS[carga.politica_existentes]|lower }}</p>
+  <dl class="datos">
+    <div><dt>Creados</dt><dd>{{ carga.creados }}</dd></div>
+    <div><dt>Actualizados</dt><dd>{{ carga.actualizados }}</dd></div>
+    <div><dt>Omitidos</dt><dd>{{ carga.omitidos }}</dd></div>
+    <div><dt>Con error</dt><dd>{{ carga.con_error }}</dd></div>
+  </dl>
+  <div class="acciones">
+    {% if carga.con_error %}
+    <a class="boton secundario" href="{{ url_for('postulantes.errores_csv', token=token) }}">Descargar errores (CSV)</a>
+    {% endif %}
+    <a class="boton primario-corto sin-margen" href="{{ url_for('postulantes.carga') }}">Nueva carga</a>
+  </div>
+  {% if carga.con_error %}<p class="nota">El detalle de errores estará disponible durante una hora.</p>{% endif %}
+</section>
+{% endblock %}
