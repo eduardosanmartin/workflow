@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block titulo %}Sin permiso{% endblock %}
+{% block contenido %}
+<section class="tarjeta angosta">
+  <h1>No tiene permiso para ver esta página</h1>
+  <p><a href="{{ url_for('principal.inicio') }}">Volver al inicio</a></p>
+</section>
+{% endblock %}

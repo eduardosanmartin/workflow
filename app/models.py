@@ -197,6 +197,7 @@ class Auditoria(Base):
     id = BigAutoField()
     fecha_hora = DateTimeField(default=ahora)
     usuario = ForeignKeyField(Usuario, null=True, on_delete="SET NULL")
+    rol = CharField(max_length=20, null=True)
     actor = CharField(max_length=10)
     accion = CharField(max_length=50)
     entidad = CharField(max_length=30)

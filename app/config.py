@@ -49,10 +49,16 @@ class Config:
     SESSION_COOKIE_SECURE = APP_BASE_URL.startswith("https://")
 
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # RF-08: archivos de hasta 10 MB
+    BCRYPT_ROUNDS = 12
 
 
 class TestConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False
+    BCRYPT_ROUNDS = 4  # pruebas rápidas; producción usa 12
     DATABASE_NAME = os.getenv("TEST_DATABASE_NAME", "workflow_test")
     SMTP_HOST = ""
+    SUPERADMIN_EMAIL = ""
+    SUPERADMIN_PASSWORD_HASH = ""
+    SUPERADMIN_PASSWORD = ""

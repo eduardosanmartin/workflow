@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}WorkFlow Matrícula{% endblock %} · UNACH</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <header class="barra">
+    <a class="marca" href="{{ url_for('principal.inicio') }}">WorkFlow Matrícula</a>
+    {% if g.usuario %}
+    <div class="sesion">
+      <span>{{ g.usuario.nombre }} · {{ NOMBRE_ROL[g.usuario.rol] }}</span>
+      {% if not g.usuario.must_change_password %}
+      <a href="{{ url_for('auth.cambiar_password') }}">Cambiar contraseña</a>
+      {% endif %}
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="enlace">Cerrar sesión</button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+
+  <main class="contenido">
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+    {% for categoria, mensaje in mensajes %}
+    {# RNF-07: el estado se comunica con texto e ícono, no solo con color #}
+    <div class="mensaje mensaje-{{ categoria }}" role="{{ 'alert' if categoria == 'error' else 'status' }}">
+      <span class="icono" aria-hidden="true">{{ {'error': '✖', 'exito': '✔', 'aviso': '⚠'}.get(categoria, 'ℹ') }}</span>
+      <span>{{ mensaje }}</span>
+    </div>
+    {% endfor %}
+    {% endwith %}
+    {% block contenido %}{% endblock %}
+  </main>
+</body>
+</html>

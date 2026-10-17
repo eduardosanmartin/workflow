@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block titulo %}No encontrado{% endblock %}
+{% block contenido %}
+<section class="tarjeta angosta">
+  <h1>La página no existe</h1>
+  <p><a href="{{ url_for('principal.inicio') }}">Volver al inicio</a></p>
+</section>
+{% endblock %}
