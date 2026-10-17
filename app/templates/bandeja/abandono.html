@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Abandonó{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ volver }}">Bandeja</a> › Abandonó</p>
+<section class="tarjeta angosta">
+  <h1>¿El postulante {{ numero }} se retiró de la fila?</h1>
+  <p><strong>{{ nombre }}</strong>, en espera en {{ fase.nombre }}.</p>
+  <p class="nota">Saldrá de la bandeja y su seguimiento mostrará que su atención quedó en pausa.
+    Si vuelve, se reactiva desde su ficha.</p>
+  <form method="post" action="{{ url_for('bandeja.abandono', expediente_id=expediente.id) }}">
+    {{ ui.csrf() }}
+    <input type="hidden" name="version" value="{{ version }}">
+    <input type="hidden" name="volver" value="{{ volver }}">
+    <div class="acciones">
+      <button type="submit" class="peligro">Sí, marcar «Abandonó»</button>
+      <a href="{{ volver }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

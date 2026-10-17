@@ -209,3 +209,15 @@ fieldset.sin-borde legend h2 { margin: 0 0 .25rem; }
 }
 .estado-pendiente { background: var(--error-fondo); color: var(--error-texto); }
 .estado-matriculado { background: var(--exito-fondo); color: var(--exito-texto); }
+
+/* ── Bandeja de trabajo ── */
+.filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 1rem; align-items: end; }
+.filtros label { margin-top: 0; }
+.filtros .acciones { margin-top: .75rem; }
+.contador { display: inline-block; min-width: 1.6rem; padding: 0 .45rem; border-radius: 999px; background: var(--info-fondo);
+  color: var(--info-texto); font-size: .85rem; text-align: center; vertical-align: middle; }
+.numero-fila { font-weight: 800; color: var(--primario); white-space: nowrap; }
+.sin-margen { margin: 0; }
+.insignia-flujo { background: #f3e8ff; color: #4c1d95; }
+.paso-interrumpido { color: var(--texto-suave); text-decoration: line-through; }
+.aviso-casilla { background: var(--aviso-fondo); color: var(--aviso-texto); padding: .5rem .75rem; border-radius: 6px; }

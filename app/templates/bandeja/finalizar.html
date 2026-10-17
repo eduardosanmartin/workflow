@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% set titulo = 'Cerrar matrícula manualmente' if final_manual else 'Finalizar y derivar' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ volver }}">Bandeja</a> › {{ titulo }}</p>
+<section class="tarjeta media">
+  <h1>{{ titulo }}</h1>
+  <dl class="datos">
+    <div><dt>N° de atención</dt><dd>{{ numero }}</dd></div>
+    <div><dt>Postulante</dt><dd>{{ nombre }}</dd></div>
+    <div><dt>Fase actual</dt><dd>{{ fase.nombre }} · {{ 'En atención' if estado == 'EN_ATENCION' else 'En espera' }}</dd></div>
+    {% if flujo %}<div><dt>Flujo alternativo</dt><dd>{{ flujo }}</dd></div>{% endif %}
+  </dl>
+  <h2>Ruta</h2>
+  <ol class="recorrido">
+    {% for paso in ruta %}
+    {% if paso.actual %}{% set clase = 'actual' %}
+    {% elif paso.estado in ('COMPLETADO', 'COMPLETADO_CON_OBSERVACIONES') %}{% set clase = 'hecho' %}
+    {% elif paso.estado == 'PLANIFICADA' %}{% set clase = 'pendiente' %}
+    {% else %}{% set clase = 'interrumpido' %}{% endif %}
+    <li class="paso-{{ clase }}">
+      <span class="marca-paso" aria-hidden="true">{{ {'hecho': '✓', 'actual': '➜', 'pendiente': '○', 'interrumpido': '↷'}[clase] }}</span>
+      <span>{{ paso.fase }} <small>· {{ {'hecho': 'completada', 'actual': 'actual', 'pendiente': 'planificada', 'interrumpido': 'interrumpida'}[clase] }}</small></span>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<form method="post" action="{{ url_for('bandeja.finalizar', expediente_id=expediente.id) }}" class="media">
+  {{ ui.csrf() }}
+  <input type="hidden" name="version" value="{{ version }}">
+  <input type="hidden" name="volver" value="{{ volver }}">
+
+  <section class="tarjeta separada">
+    <fieldset class="sin-borde">
+      <legend><h2>Resultado de la atención</h2></legend>
+      {% set resultado = form.get('resultado', 'completado') %}
+      <label class="casilla"><input type="radio" name="resultado" value="completado" {% if resultado == 'completado' %}checked{% endif %}> Completado</label>
+      <label class="casilla"><input type="radio" name="resultado" value="observaciones" {% if resultado == 'observaciones' %}checked{% endif %}> Completado con observaciones</label>
+      <div class="subopciones">
+        <label for="observacion" class="oculto">Observación</label>
+        <textarea id="observacion" name="observacion" rows="2" maxlength="2000"
+                  placeholder="Observación (obligatoria si hay observaciones)">{{ form.get('observacion', '') }}</textarea>
+      </div>
+      {% if estado == 'EN_ESPERA' %}
+      <label class="casilla aviso-casilla"><input type="checkbox" name="sin_atender" {% if form.get('sin_atender') %}checked{% endif %}>
+        <span>Confirmo finalizar sin haber presionado «Atender» (queda sin tiempo de atención).</span></label>
+      {% endif %}
+    </fieldset>
+  </section>
+
+  <section class="tarjeta separada">
+    <fieldset class="sin-borde">
+      <legend><h2>¿Cómo sigue?</h2></legend>
+      {% set accion = form.get('accion', 'seguir') %}
+
+      {% if flujo %}
+        {% if final_manual %}
+        <label class="casilla"><input type="radio" name="accion" value="seguir" {% if accion == 'seguir' %}checked{% endif %}>
+          <span><strong>Cerrar matrícula manualmente:</strong> fase final de «{{ flujo }}». El postulante queda Matriculado.</span></label>
+        <div class="subopciones">
+          <label for="detalle_cierre">Detalle del cierre</label>
+          <textarea id="detalle_cierre" name="detalle_cierre" rows="3" maxlength="2000"
+                    placeholder="Ej.: pago en efectivo, boleta 12345; contrato firmado en papel">{{ form.get('detalle_cierre', '') }}</textarea>
+          <label class="casilla"><input type="checkbox" name="confirmar_cierre" {% if form.get('confirmar_cierre') %}checked{% endif %}>
+            <span>Confirmo que la matrícula quedó cerrada manualmente.</span></label>
+        </div>
+        {% else %}
+        <label class="casilla"><input type="radio" name="accion" value="seguir" {% if accion == 'seguir' %}checked{% endif %}>
+          <span><strong>Finalizar:</strong> pasa a {{ siguiente }} (secuencia fija de «{{ flujo }}»).</span></label>
+        {% endif %}
+
+        <label class="casilla"><input type="radio" name="accion" value="devolver" {% if accion == 'devolver' %}checked{% endif %}>
+          <span><strong>Devolver al flujo principal:</strong> el caso sí puede terminar en {{ mnp.nombre }}.</span></label>
+        <div class="subopciones">
+          <label for="motivo">Motivo</label>
+          <textarea id="motivo" name="motivo" rows="2" maxlength="2000">{{ form.get('motivo', '') }}</textarea>
+          <small>Numere las fases de consulta que debe visitar. En blanco, va directo a {{ mnp.nombre }}.</small>
+          {% for f in consultas %}
+          <label class="posicion"><input type="number" min="1" max="{{ consultas|length }}" name="orden_{{ f.id }}"
+                 value="{{ form.get('orden_' ~ f.id, '') }}" aria-label="Orden de {{ f.nombre }}"> {{ f.nombre }}</label>
+          {% endfor %}
+          <label class="casilla"><input type="checkbox" name="interrumpir" {% if form.get('interrumpir') %}checked{% endif %}>
+            <span>Interrumpir la atención actual (no se completó)</span></label>
+        </div>
+
+      {% else %}
+        {% if es_mnp %}
+        <label class="casilla"><input type="radio" name="accion" value="seguir" {% if accion == 'seguir' %}checked{% endif %}>
+          <span><strong>Completar la matrícula:</strong> el postulante queda Matriculado.</span></label>
+        {% else %}
+        <label class="casilla"><input type="radio" name="accion" value="seguir" {% if accion == 'seguir' %}checked{% endif %}>
+          <span><strong>Continuar la ruta</strong> y terminar en {{ mnp.nombre }}</span></label>
+        <div class="subopciones">
+          {% if es_inicial and via_qr %}<p class="nota">Preseleccionadas: las dudas que marcó el postulante en el QR. Confírmelas o ajústelas.</p>{% endif %}
+          <small>Numere 1, 2, 3… las fases de consulta que debe visitar, en ese orden. En blanco, va directo a {{ mnp.nombre }}.</small>
+          {% for f in consultas %}
+          <label class="posicion"><input type="number" min="1" max="{{ consultas|length }}" name="orden_{{ f.id }}"
+                 value="{{ form.get('orden_' ~ f.id, '') }}" aria-label="Orden de {{ f.nombre }}"> {{ f.nombre }}</label>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if not es_inicial and consultas %}
+        <label class="casilla"><input type="radio" name="accion" value="derivar" {% if accion == 'derivar' %}checked{% endif %}>
+          <span><strong>Derivar ahora:</strong> interrumpe la atención; {{ fase.nombre }} se vuelve a planificar después.</span></label>
+        <div class="subopciones">
+          <label for="destino" class="oculto">Fase de destino</label>
+          <select id="destino" name="destino">
+            <option value="">Elija la fase de destino…</option>
+            {% for f in consultas %}<option value="{{ f.id }}" {% if form.get('destino') == f.id|string %}selected{% endif %}>{{ f.nombre }}</option>{% endfor %}
+          </select>
+        </div>
+        {% endif %}
+
+        {% if flujos %}
+        <label class="casilla"><input type="radio" name="accion" value="flujo" {% if accion == 'flujo' %}checked{% endif %}>
+          <span><strong>Derivar a flujo alternativo:</strong> el caso no puede terminar en {{ mnp.nombre }}.</span></label>
+        <div class="subopciones">
+          <label for="entrada" class="oculto">Flujo y fase de entrada</label>
+          <select id="entrada" name="entrada">
+            <option value="">Elija el flujo y la fase de entrada…</option>
+            {% for valor, texto in flujos %}<option value="{{ valor }}" {% if form.get('entrada') == valor %}selected{% endif %}>{{ texto }}</option>{% endfor %}
+          </select>
+          <label class="casilla"><input type="checkbox" name="interrumpir" {% if form.get('interrumpir') %}checked{% endif %}>
+            <span>Interrumpir la atención actual (no se completó)</span></label>
+        </div>
+        {% endif %}
+      {% endif %}
+    </fieldset>
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Confirmar</button>
+      <a href="{{ volver }}">Cancelar</a>
+    </div>
+  </section>
+</form>
+{% endblock %}

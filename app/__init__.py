@@ -17,12 +17,13 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     limiter.init_app(app)
 
-    from app.blueprints import admin, auth, iniciar, principal, qr, seguimiento
+    from app.blueprints import admin, auth, bandeja, iniciar, principal, qr, seguimiento
     from app.security import cargar_usuario
-    from app.services.inicio import puede_iniciar
+    from app.services.bandeja import puede_ver as puede_ver_bandeja
+    from app.services.inicio import proceso_activo, puede_iniciar
 
     app.before_request(cargar_usuario)
-    for blueprint in (auth, principal, admin, iniciar, qr, seguimiento):
+    for blueprint in (auth, principal, admin, iniciar, bandeja, qr, seguimiento):
         app.register_blueprint(blueprint.bp)
 
     @app.context_processor
@@ -30,7 +31,12 @@ def create_app(config_class=Config):
         def _puede_iniciar():
             usuario = g.get("usuario")
             return usuario is not None and not usuario.must_change_password and puede_iniciar(usuario)
-        return {"NOMBRE_ROL": principal.ROLES, "puede_iniciar": _puede_iniciar}
+
+        def _puede_ver_bandeja():
+            usuario = g.get("usuario")
+            return (usuario is not None and not usuario.must_change_password
+                    and puede_ver_bandeja(usuario, proceso_activo()))
+        return {"NOMBRE_ROL": principal.ROLES, "puede_iniciar": _puede_iniciar, "puede_ver_bandeja": _puede_ver_bandeja}
 
     @app.errorhandler(403)
     def _prohibido(_e):

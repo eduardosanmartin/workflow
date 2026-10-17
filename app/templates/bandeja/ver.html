@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Bandeja{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/bandeja.js') }}" defer></script>{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <h1>Bandeja de trabajo</h1>
+  {% if puede_iniciar() %}<a class="boton primario-corto" href="{{ url_for('iniciar.rut') }}">Iniciar proceso</a>{% endif %}
+</div>
+
+<form method="get" action="{{ url_for('bandeja.ver') }}" class="tarjeta filtros" aria-label="Filtros de la bandeja">
+  {% if fases|length > 1 %}
+  <div>
+    <label for="fase">Fase</label>
+    <select id="fase" name="fase">
+      <option value="">Todas mis fases</option>
+      {% for f in fases %}<option value="{{ f.id }}" {% if filtros.get('fase_id') == f.id %}selected{% endif %}>{{ f.nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div>
+    <label for="fecha">Fecha de inicio</label>
+    <input id="fecha" name="fecha" type="date" value="{{ filtros.get('fecha', '') }}">
+  </div>
+  <div>
+    <label for="carrera">Carrera</label>
+    <select id="carrera" name="carrera">
+      <option value="">Todas</option>
+      {% for c in carreras %}<option value="{{ c.codigo }}" {% if filtros.get('carrera') == c.codigo %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="acciones">
+    <button type="submit" class="secundario">Filtrar</button>
+    {% if filtros %}<a href="{{ url_for('bandeja.ver') }}">Quitar filtros</a>{% endif %}
+  </div>
+</form>
+
+<div id="listas" data-sondeo="{{ volver ~ ('&' if '?' in volver else '?') ~ 'parcial=1' }}">
+  {% include "bandeja/_listas.html" %}
+</div>
+<p class="nota" id="estado-sondeo">Se actualiza automáticamente cada 10 segundos.</p>
+{% endblock %}

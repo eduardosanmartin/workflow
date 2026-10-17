@@ -1,0 +1,89 @@
+{% import "_macros.html" as ui with context %}
+{% macro nombre(f) %}
+  <strong>{{ f.nombre }}</strong>
+  {% if f.flujo %}<br><span class="insignia insignia-flujo">{{ f.flujo }}</span>{% endif %}
+  {% if f.ruta_propuesta %}<br><small>{% if f.via_qr %}QR · {% endif %}ruta propuesta: {{ f.ruta_propuesta|join(' → ') }}</small>{% endif %}
+{% endmacro %}
+{% macro finalizar(f) %}
+  <a class="boton sin-margen {{ 'primario-corto' if f.estado == 'EN_ATENCION' else 'secundario' }}"
+     href="{{ url_for('bandeja.finalizar_form', expediente_id=f.expediente_id, volver=volver) }}">
+    {{ 'Cerrar matrícula manualmente' if f.final_manual else 'Finalizar y derivar' }}</a>
+{% endmacro %}
+
+<section class="separada" aria-labelledby="t-espera">
+  <h2 id="t-espera">En espera de atención <span class="contador">{{ listas.en_espera|length }}</span></h2>
+  {% if listas.en_espera %}
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>N°</th><th>Postulante</th>{% if varias_fases %}<th>Fase</th>{% endif %}<th>Viene de</th><th>Esperando</th><th><span class="oculto">Acciones</span></th></tr></thead>
+    <tbody>
+    {% for f in listas.en_espera %}
+    <tr>
+      <td class="numero-fila">{{ f.numero }}</td>
+      <td data-etiqueta="Postulante">{{ nombre(f) }}</td>
+      {% if varias_fases %}<td data-etiqueta="Fase">{{ f.fase }}</td>{% endif %}
+      <td data-etiqueta="Viene de">{{ f.viene_de or '—' }}</td>
+      <td data-etiqueta="Esperando">{{ f.espera }}</td>
+      <td class="acciones-fila">
+        {{ ui.boton_post(url_for('bandeja.atender', expediente_id=f.expediente_id), 'Atender', 'primario-corto sin-margen',
+                         {'version': f.version, 'volver': volver}) }}
+        {{ finalizar(f) }}
+        <a class="enlace-peligro" href="{{ url_for('bandeja.abandono_form', expediente_id=f.expediente_id, volver=volver) }}">Abandonó</a>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="nota tarjeta">No hay postulantes en espera.</p>
+  {% endif %}
+</section>
+
+<section class="separada" aria-labelledby="t-atencion">
+  <h2 id="t-atencion">En atención <span class="contador">{{ listas.en_atencion|length }}</span></h2>
+  {% if listas.en_atencion %}
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>N°</th><th>Postulante</th>{% if varias_fases %}<th>Fase</th>{% endif %}<th>Atiende</th><th>Desde</th><th><span class="oculto">Acciones</span></th></tr></thead>
+    <tbody>
+    {% for f in listas.en_atencion %}
+    <tr>
+      <td class="numero-fila">{{ f.numero }}</td>
+      <td data-etiqueta="Postulante">{{ nombre(f) }}</td>
+      {% if varias_fases %}<td data-etiqueta="Fase">{{ f.fase }}</td>{% endif %}
+      <td data-etiqueta="Atiende">{{ f.atendido_por or '—' }}</td>
+      <td data-etiqueta="Desde">{{ f.desde }}</td>
+      <td class="acciones-fila">{{ finalizar(f) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="nota tarjeta">No hay postulantes en atención.</p>
+  {% endif %}
+</section>
+
+<section class="separada" aria-labelledby="t-proximos">
+  <h2 id="t-proximos">Próximos <span class="contador">{{ listas.proximos|length }}</span></h2>
+  {% if listas.proximos %}
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>N°</th><th>Postulante</th><th>Ahora está en</th>{% if varias_fases %}<th>Llegará a</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for f in listas.proximos %}
+    <tr>
+      <td class="numero-fila">{{ f.numero }}</td>
+      <td data-etiqueta="Postulante">{{ nombre(f) }}</td>
+      <td data-etiqueta="Ahora está en">{{ f.actual }}</td>
+      {% if varias_fases %}<td data-etiqueta="Llegará a">{{ f.fase }}</td>{% endif %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="nota tarjeta">No hay postulantes que lleguen próximamente.</p>
+  {% endif %}
+</section>

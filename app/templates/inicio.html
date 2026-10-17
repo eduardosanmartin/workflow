@@ -4,6 +4,6 @@
 <section class="tarjeta">
   <h1>Hola, {{ g.usuario.nombre }}</h1>
   <p>Ingresó como <strong>{{ NOMBRE_ROL[g.usuario.rol] }}</strong>.</p>
-  <p class="nota">Las pantallas de configuración, inicio de proceso y bandeja se agregarán en los próximos pasos.</p>
+  {% if puede_ver_bandeja() %}<p><a class="boton primario-corto" href="{{ url_for('bandeja.ver') }}">Ir a la bandeja de trabajo</a></p>{% endif %}
 </section>
 {% endblock %}

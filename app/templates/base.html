@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}WorkFlow Matrícula{% endblock %} · UNACH</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block scripts %}{% endblock %}
 </head>
 <body>
   <header class="barra">
     <a class="marca" href="{{ url_for('principal.inicio') }}">WorkFlow Matrícula</a>
     {% if g.usuario and not g.usuario.must_change_password %}
     <nav class="menu" aria-label="Menú principal">
+      {% if puede_ver_bandeja() %}<a href="{{ url_for('bandeja.ver') }}">Bandeja</a>{% endif %}
       {% if puede_iniciar() %}<a href="{{ url_for('iniciar.rut') }}">Iniciar proceso</a>{% endif %}
       {% if g.usuario.rol == 'ADMIN' %}
       <a href="{{ url_for('admin.procesos') }}">Procesos</a>

@@ -207,26 +207,32 @@ def ruta_desde_formulario(form, estructura) -> dict:
     if dudas == "no":
         return {"consultas": []}
     if dudas == "si":
-        elegidas = []
-        for fase in estructura.fases:
-            if fase.tipo != wf.CONSULTA:
-                continue
-            valor = (form.get(f"orden_{fase.id}") or "").strip()
-            if not valor:
-                continue
-            if not valor.isdigit() or int(valor) < 1:
-                raise _invalido("El orden de las fases debe ser un número desde 1")
-            elegidas.append((int(valor), fase.id))
-        if not elegidas:
+        consultas = consultas_numeradas(form, estructura)
+        if not consultas:
             raise _invalido("Elija al menos una fase de consulta, numerándolas en el orden de visita")
-        if len({n for n, _ in elegidas}) != len(elegidas):
-            raise _invalido("No repita números en el orden de las fases")
-        return {"consultas": [fase_id for _, fase_id in sorted(elegidas)]}
+        return {"consultas": consultas}
     try:
         flujo_id, fase_id = (int(parte) for parte in (form.get("entrada") or "").split(":"))
     except ValueError:
         raise _invalido("Elija el flujo alternativo y su fase de entrada") from None
     return {"flujo_id": flujo_id, "fase_entrada_id": fase_id}
+
+
+def consultas_numeradas(form, estructura) -> list:
+    """Fases de consulta numeradas 1, 2, 3… en `orden_<fase_id>`, en ese orden (puede ser vacía)."""
+    elegidas = []
+    for fase in estructura.fases:
+        if fase.tipo != wf.CONSULTA:
+            continue
+        valor = (form.get(f"orden_{fase.id}") or "").strip()
+        if not valor:
+            continue
+        if not valor.isdigit() or int(valor) < 1:
+            raise _invalido("El orden de las fases debe ser un número desde 1")
+        elegidas.append((int(valor), fase.id))
+    if len({n for n, _ in elegidas}) != len(elegidas):
+        raise _invalido("No repita números en el orden de las fases")
+    return [fase_id for _, fase_id in sorted(elegidas)]
 
 
 def opciones_de_flujo(estructura, nombres_fase) -> list:
@@ -242,13 +248,13 @@ def opciones_de_flujo(estructura, nombres_fase) -> list:
 
 # ── Creación del expediente (RF-11) ─────────────────────────────────
 
-def _crear_expediente(proceso, postulante, recorrido, via, por):
+def _crear_expediente(proceso, postulante, recorrido, via, por, ahora):
     numero = recorridos.siguiente_numero_atencion(proceso.id)
     try:
         with db.atomic():
             expediente = m.Expediente.create(
                 proceso=proceso.id, postulante=postulante.id, via_inicio=via,
-                iniciado_por=por.id if por else None, numero_atencion=numero,
+                iniciado_por=por.id if por else None, numero_atencion=numero, creado_en=ahora,
                 token_seguimiento=secrets.token_urlsafe(32),  # 256 bits (RF-20)
             )
     except IntegrityError:
@@ -304,7 +310,7 @@ def iniciar_por_staff(datos: dict, ruta: dict, por, ahora=None):
                 auditoria.registrar("EDITAR_POSTULANTE", "postulante", postulante.id,
                                     anterior=antes, nuevo=despues, usuario=por)
 
-        expediente = _crear_expediente(proceso, postulante, recorrido, "STAFF", por)
+        expediente = _crear_expediente(proceso, postulante, recorrido, "STAFF", por, ahora)
         auditoria.registrar("INICIAR_PROCESO", "expediente", expediente.id, usuario=por, nuevo={
             "via": "STAFF", "postulante_id": postulante.id,
             "numero_atencion": numero_visible(proceso, expediente.numero_atencion),
@@ -392,7 +398,7 @@ def iniciar_por_qr(datos: dict, consultas, ahora=None):
                 auditoria.registrar("COMPLETAR_POSTULANTE", "postulante", postulante.id, actor="PUBLICO",
                                     anterior=antes, nuevo=despues)
 
-        expediente = _crear_expediente(proceso, postulante, recorrido, "QR", None)
+        expediente = _crear_expediente(proceso, postulante, recorrido, "QR", None, ahora)
         auditoria.registrar("INICIAR_PROCESO", "expediente", expediente.id, actor="PUBLICO", nuevo={
             "via": "QR", "postulante_id": postulante.id,
             "numero_atencion": numero_visible(proceso, expediente.numero_atencion),
