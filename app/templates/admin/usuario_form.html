@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ usuario.nombre if usuario else 'Nuevo usuario' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('admin.usuarios') }}">Usuarios</a> › {{ usuario.nombre if usuario else 'Nuevo' }}</p>
+<section class="tarjeta media">
+  <h1>{{ usuario.nombre if usuario else 'Nuevo usuario' }}</h1>
+  {% if not usuario %}<p class="nota">Se generará una contraseña temporal que deberá cambiar en su primer ingreso.</p>{% endif %}
+  <form method="post">
+    {{ ui.csrf() }}
+    {{ ui.campo('email', 'Correo', datos, tipo='email', maximo=254) }}
+    {{ ui.campo('nombre', 'Nombre', datos, maximo=200) }}
+    <fieldset>
+      <legend>Rol</legend>
+      {% for rol in roles %}
+      <label class="casilla"><input type="radio" name="rol" value="{{ rol }}" {% if datos.get('rol') == rol %}checked{% endif %}>
+        {{ NOMBRE_ROL[rol] }}</label>
+      {% endfor %}
+      <small>El Administrador y el Gestor pueden actuar en todas las fases. El Usuario de fase, solo en las asignadas.</small>
+    </fieldset>
+
+    <fieldset class="lista-casillas">
+      <legend>Fases asignadas</legend>
+      <small>Obligatorio para el Usuario de fase (al menos una). Asignarlo a «Iniciado» lo habilita para iniciar procesos.</small>
+      {% for proceso, fases in grupos %}
+        <p class="grupo">{{ proceso.nombre }} {{ ui.estado_proceso(proceso) }}</p>
+        {% for f in fases %}
+        <label class="casilla"><input type="checkbox" name="fases" value="{{ f.id }}" {% if f.id|string in datos.get('fases', []) %}checked{% endif %}>
+          {{ f.nombre }}</label>
+        {% endfor %}
+      {% else %}
+        <p class="nota">No hay procesos abiertos. Cree un proceso antes de crear usuarios de fase.</p>
+      {% endfor %}
+    </fieldset>
+
+    {{ ui.casilla('puede_registrar_postulantes', 'Puede registrar postulantes (carga manual)', datos,
+                  ayuda='Solo aplica al Usuario de fase. Por defecto, no.') }}
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Guardar</button>
+      <a href="{{ url_for('admin.usuarios') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

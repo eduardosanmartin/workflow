@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Cerrar proceso{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('admin.procesos') }}">Procesos</a> ›
+  <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) }}">{{ proceso.codigo }}</a> › Cerrar</p>
+<section class="tarjeta media">
+  <h1>Cerrar «{{ proceso.nombre }}»</h1>
+  <div class="mensaje mensaje-aviso" role="status"><span class="icono" aria-hidden="true">⚠</span>
+    <div>
+      <p><strong>{{ pendientes }}</strong> expediente(s) no matriculado(s) quedarán como <strong>«Proceso pendiente»</strong>.</p>
+      <p>Al cerrar, no se aceptan más inicios, atenciones ni derivaciones, los enlaces de seguimiento expiran
+        y la configuración queda de solo lectura. <strong>No se puede deshacer.</strong></p>
+    </div>
+  </div>
+  <form method="post">
+    {{ ui.csrf() }}
+    <label for="confirmacion">Para confirmar, escriba el código del proceso: <code>{{ proceso.codigo }}</code></label>
+    <input id="confirmacion" name="confirmacion" type="text" autocomplete="off" required>
+    <div class="acciones">
+      <button type="submit" class="peligro">Cerrar proceso</button>
+      <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

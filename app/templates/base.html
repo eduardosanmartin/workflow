@@ -9,6 +9,12 @@
 <body>
   <header class="barra">
     <a class="marca" href="{{ url_for('principal.inicio') }}">WorkFlow Matrícula</a>
+    {% if g.usuario and not g.usuario.must_change_password and g.usuario.rol == 'ADMIN' %}
+    <nav class="menu" aria-label="Administración">
+      <a href="{{ url_for('admin.procesos') }}">Procesos</a>
+      <a href="{{ url_for('admin.usuarios') }}">Usuarios</a>
+    </nav>
+    {% endif %}
     {% if g.usuario %}
     <div class="sesion">
       <span>{{ g.usuario.nombre }} · {{ NOMBRE_ROL[g.usuario.rol] }}</span>

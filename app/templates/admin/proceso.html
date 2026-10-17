@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ proceso.nombre }}{% endblock %}
+{% block contenido %}
+{% set editable = proceso.estado != 'CERRADO' %}
+{% set estructura_libre = editable and not iniciado %}
+<p class="miga"><a href="{{ url_for('admin.procesos') }}">Procesos</a> › {{ proceso.codigo }}</p>
+<div class="encabezado">
+  <h1>{{ proceso.nombre }} {{ ui.estado_proceso(proceso) }}</h1>
+  {% if editable %}<a class="boton secundario" href="{{ url_for('admin.proceso_editar', proceso_id=proceso.id) }}">Editar datos</a>{% endif %}
+</div>
+
+<section class="tarjeta">
+  <dl class="datos">
+    <div><dt>Código</dt><dd>{{ proceso.codigo }}</dd></div>
+    <div><dt>Periodo</dt><dd>{{ proceso.fecha_inicio.strftime('%d-%m-%Y') }} al {{ proceso.fecha_fin.strftime('%d-%m-%Y') }}</dd></div>
+    <div><dt>Número de atención</dt><dd>{{ proceso.prefijo_atencion }}-0001</dd></div>
+    <div><dt>Datos en el QR</dt><dd>{{ 'Enmascarados' if proceso.enmascarar_datos_qr else 'Completos' }}</dd></div>
+    <div><dt>Eliminación de datos</dt><dd>{{ proceso.fecha_eliminacion.strftime('%d-%m-%Y') }}</dd></div>
+    <div><dt>Estructura</dt><dd>{{ 'Bloqueada (tiene expedientes)' if iniciado else 'Editable (sin expedientes)' }}</dd></div>
+  </dl>
+  {% if proceso.descripcion %}<p>{{ proceso.descripcion }}</p>{% endif %}
+
+  {% if proceso.estado == 'BORRADOR' %}
+    {% if errores %}
+    <div class="mensaje mensaje-aviso" role="status"><span class="icono" aria-hidden="true">⚠</span>
+      <div><strong>Para activar el proceso falta:</strong>
+        <ul>{% for e in errores %}<li>{{ e }}</li>{% endfor %}</ul></div></div>
+    {% elif activo %}
+    <p class="nota">Para activar este proceso, primero cierre el proceso activo «{{ activo.nombre }}».</p>
+    {% else %}
+    {{ ui.boton_post(url_for('admin.proceso_activar', proceso_id=proceso.id), 'Activar proceso', 'primario-corto',
+                     confirmar='¿Activar el proceso? Desde ese momento acepta inicios de proceso por QR y por staff.') }}
+    {% endif %}
+  {% elif proceso.estado == 'ACTIVO' %}
+    <a class="boton peligro" href="{{ url_for('admin.proceso_cerrar', proceso_id=proceso.id) }}">Cerrar proceso…</a>
+  {% else %}
+    <p class="nota">Cerrado el {{ proceso.fecha_cierre.strftime('%d-%m-%Y %H:%M') if proceso.fecha_cierre else '' }}. La configuración es de solo lectura.</p>
+  {% endif %}
+</section>
+
+<div class="encabezado">
+  <h2>Fases</h2>
+  {% if estructura_libre %}<a class="boton secundario" href="{{ url_for('admin.fase_nueva', proceso_id=proceso.id) }}">Agregar fase de consulta</a>{% endif %}
+</div>
+<div class="tabla-desplazable">
+<table class="tabla-apilable">
+  <thead><tr><th>Orden</th><th>Fase</th><th>Tipo</th><th>En QR</th><th>Responsables</th><th><span class="oculto">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for f in fases %}
+  <tr>
+    <td data-etiqueta="Orden">{{ loop.index }}</td>
+    <td><strong>{{ f.identificador }}</strong> · {{ f.nombre }}</td>
+    <td data-etiqueta="Tipo">{{ NOMBRE_TIPO[f.tipo] }}</td>
+    <td data-etiqueta="En QR">{% if f.tipo == 'CONSULTA' %}{{ 'Sí' if f.mostrar_en_qr else 'No' }}{% else %}—{% endif %}</td>
+    <td data-etiqueta="Responsables">
+      {% set lista = responsables.get(f.id, []) %}
+      {% for u in lista %}<span class="{{ '' if u.activo else 'tachado' }}">{{ u.nombre }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+      {% if not lista %}<span class="alerta-texto">⚠ Sin responsables</span>{% endif %}
+    </td>
+    <td class="acciones-fila">
+      {% if editable %}
+        <a href="{{ url_for('admin.fase', fase_id=f.id) }}">Editar y responsables</a>
+        {% if f.tipo == 'CONSULTA' %}
+          {{ ui.boton_post(url_for('admin.fase_mover', fase_id=f.id), '↑', 'icono-boton', {'direccion': 'subir'}) }}
+          {{ ui.boton_post(url_for('admin.fase_mover', fase_id=f.id), '↓', 'icono-boton', {'direccion': 'bajar'}) }}
+          {% if estructura_libre %}
+          {{ ui.boton_post(url_for('admin.fase_eliminar', fase_id=f.id), 'Eliminar', 'enlace-peligro',
+                           confirmar='¿Eliminar la fase «' ~ f.nombre ~ '»?') }}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<div class="encabezado">
+  <h2>Flujos alternativos (cierre manual)</h2>
+  {% if estructura_libre %}<a class="boton secundario" href="{{ url_for('admin.flujo_nuevo', proceso_id=proceso.id) }}">Nuevo flujo alternativo</a>{% endif %}
+</div>
+{% if flujos %}
+<div class="tabla-desplazable">
+<table class="tabla-apilable">
+  <thead><tr><th>Flujo</th><th>Secuencia (la última es la fase final manual)</th><th>Estado</th><th><span class="oculto">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for flujo, nombres in flujos %}
+  <tr>
+    <td><strong>{{ flujo.codigo }}</strong> · {{ flujo.nombre }}</td>
+    <td data-etiqueta="Secuencia">{{ nombres|join(' → ') }}</td>
+    <td data-etiqueta="Estado">{{ 'Activo' if flujo.activo else 'Inactivo' }}</td>
+    <td class="acciones-fila">
+      {% if editable %}<a href="{{ url_for('admin.flujo', flujo_id=flujo.id) }}">Editar</a>{% endif %}
+      {% if estructura_libre %}
+      {{ ui.boton_post(url_for('admin.flujo_eliminar', flujo_id=flujo.id), 'Eliminar', 'enlace-peligro',
+                       confirmar='¿Eliminar el flujo «' ~ flujo.nombre ~ '»?') }}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="nota">Sin flujos alternativos. Úselos para los casos que no pueden terminar en MNP (ej.: pago en efectivo y contrato en papel).</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ flujo.nombre if flujo else 'Nuevo flujo alternativo' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('admin.procesos') }}">Procesos</a> ›
+  <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) }}">{{ proceso.codigo }}</a> ›
+  {{ flujo.nombre if flujo else 'Nuevo flujo alternativo' }}</p>
+<section class="tarjeta media">
+  <h1>{{ 'Flujo ' ~ flujo.nombre if flujo else 'Nuevo flujo alternativo' }}</h1>
+  <p class="nota">Secuencia fija de fases para los casos que no pueden terminar en MNP.
+    La <strong>última fase</strong> es la fase final manual, donde se registra el cierre de la matrícula.</p>
+  {% if iniciado %}
+  <p class="mensaje mensaje-aviso"><span class="icono" aria-hidden="true">⚠</span>
+    <span>El proceso ya tiene expedientes: solo se pueden cambiar el nombre, la descripción y si está activo.</span></p>
+  {% endif %}
+  <form method="post">
+    {{ ui.csrf() }}
+    {% if iniciado %}<input type="hidden" name="codigo" value="{{ datos.codigo }}">{% endif %}
+    {{ ui.campo('codigo', 'Código', datos, ayuda='Ej.: EFECTIVO', deshabilitado=iniciado, maximo=20) }}
+    {{ ui.campo('nombre', 'Nombre', datos, ayuda='Ej.: Pago en efectivo', maximo=100) }}
+    <label for="descripcion">Descripción</label>
+    <textarea id="descripcion" name="descripcion" rows="2">{{ datos.get('descripcion') or '' }}</textarea>
+
+    <fieldset class="lista-casillas" aria-describedby="ayuda-secuencia">
+      <legend>Secuencia de fases</legend>
+      <small id="ayuda-secuencia">Escriba 1, 2, 3… junto a las fases que forman el flujo, en el orden en que se recorren.
+        Deje en blanco las que no van.</small>
+      {% for f in consultas %}
+      <label class="posicion">
+        <input type="number" min="1" max="{{ consultas|length }}" name="posicion_{{ f.id }}"
+               value="{{ posiciones.get('posicion_' ~ f.id, '') }}" {% if iniciado %}disabled{% endif %}
+               aria-label="Posición de {{ f.nombre }}">
+        {{ f.identificador }} · {{ f.nombre }}
+      </label>
+      {% else %}
+      <p class="nota">El proceso no tiene fases de consulta. Agréguelas antes (ej.: Finanzas, Caja, Firma de contrato).</p>
+      {% endfor %}
+    </fieldset>
+
+    {{ ui.casilla('activo', 'Activo', datos, ayuda='Un flujo inactivo conserva sus expedientes, pero no admite nuevas derivaciones.') }}
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Guardar</button>
+      <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

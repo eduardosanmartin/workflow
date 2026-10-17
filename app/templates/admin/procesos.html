@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Procesos{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <h1>Procesos</h1>
+  <a class="boton primario-corto" href="{{ url_for('admin.proceso_nuevo') }}">Nuevo proceso</a>
+</div>
+{% if procesos %}
+<div class="tabla-desplazable">
+<table class="tabla-apilable">
+  <thead><tr><th>Código</th><th>Nombre</th><th>Periodo</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for p in procesos %}
+    <tr>
+      <td><a href="{{ url_for('admin.proceso', proceso_id=p.id) }}">{{ p.codigo }}</a></td>
+      <td>{{ p.nombre }}</td>
+      <td data-etiqueta="Periodo">{{ p.fecha_inicio.strftime('%d-%m-%Y') }} al {{ p.fecha_fin.strftime('%d-%m-%Y') }}</td>
+      <td data-etiqueta="Estado">{{ ui.estado_proceso(p) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="tarjeta">Aún no hay procesos. Cree el primero con «Nuevo proceso».</p>
+{% endif %}
+{% endblock %}

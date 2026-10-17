@@ -1,0 +1,32 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{# Botón que envía un POST (acciones que modifican datos nunca van por GET) #}
+{% macro boton_post(accion, texto, clase="secundario", campos={}, confirmar=None) %}
+<form method="post" action="{{ accion }}" class="en-linea"
+      {% if confirmar %}onsubmit="return confirm({{ confirmar|tojson|forceescape }})"{% endif %}>
+  {{ csrf() }}
+  {% for nombre, valor in campos.items() %}<input type="hidden" name="{{ nombre }}" value="{{ valor }}">{% endfor %}
+  <button type="submit" class="{{ clase }}">{{ texto }}</button>
+</form>
+{% endmacro %}
+
+{% macro campo(nombre, etiqueta, datos, tipo="text", ayuda=None, requerido=True, deshabilitado=False, maximo=None) %}
+<label for="{{ nombre }}">{{ etiqueta }}</label>
+<input id="{{ nombre }}" name="{{ nombre }}" type="{{ tipo }}" value="{{ datos.get(nombre) if datos.get(nombre) is not none else '' }}"
+       {% if requerido %}required{% endif %} {% if deshabilitado %}disabled{% endif %}
+       {% if maximo %}maxlength="{{ maximo }}"{% endif %}
+       {% if ayuda %}aria-describedby="ayuda-{{ nombre }}"{% endif %}>
+{% if ayuda %}<small id="ayuda-{{ nombre }}">{{ ayuda }}</small>{% endif %}
+{% endmacro %}
+
+{% macro casilla(nombre, etiqueta, datos, ayuda=None) %}
+<label class="casilla">
+  <input type="checkbox" name="{{ nombre }}" {% if datos.get(nombre) %}checked{% endif %}>
+  {{ etiqueta }}
+</label>
+{% if ayuda %}<small>{{ ayuda }}</small>{% endif %}
+{% endmacro %}
+
+{% macro estado_proceso(proceso) %}
+<span class="insignia insignia-{{ proceso.estado|lower }}">{{ NOMBRE_ESTADO[proceso.estado] }}</span>
+{% endmacro %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ 'Editar proceso' if proceso else 'Nuevo proceso' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('admin.procesos') }}">Procesos</a>
+  {% if proceso %} › <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) }}">{{ proceso.codigo }}</a>{% endif %}</p>
+<section class="tarjeta media">
+  <h1>{{ 'Editar proceso' if proceso else 'Nuevo proceso' }}</h1>
+  {% if iniciado %}
+  <p class="mensaje mensaje-aviso"><span class="icono" aria-hidden="true">⚠</span>
+    <span>El proceso ya tiene expedientes: su código, prefijo de atención y fecha de inicio no se pueden cambiar.</span></p>
+  {% endif %}
+  <form method="post">
+    {{ ui.csrf() }}
+    {% if iniciado %}
+      {% for c in ('codigo', 'prefijo_atencion', 'fecha_inicio') %}<input type="hidden" name="{{ c }}" value="{{ datos[c] }}">{% endfor %}
+    {% endif %}
+    {{ ui.campo('codigo', 'Código', datos, ayuda='Ej.: MAT2027. Único.', deshabilitado=iniciado, maximo=30) }}
+    {{ ui.campo('nombre', 'Nombre', datos, ayuda='Ej.: Matrícula 2027', maximo=200) }}
+    <label for="descripcion">Descripción</label>
+    <textarea id="descripcion" name="descripcion" rows="3">{{ datos.get('descripcion') or '' }}</textarea>
+    <div class="fila">
+      <div>{{ ui.campo('fecha_inicio', 'Fecha de inicio', datos, tipo='date', deshabilitado=iniciado) }}</div>
+      <div>{{ ui.campo('fecha_fin', 'Fecha de término', datos, tipo='date') }}</div>
+    </div>
+    {{ ui.campo('prefijo_atencion', 'Prefijo del número de atención', datos, ayuda='Ej.: M → M-0042', deshabilitado=iniciado, maximo=10) }}
+    {{ ui.campo('fecha_eliminacion', 'Fecha de eliminación de los datos', datos, tipo='date', requerido=False,
+                ayuda='Si la deja vacía, se usa el 30 de noviembre del año de inicio (RF-26).') }}
+    {{ ui.casilla('enmascarar_datos_qr', 'Enmascarar los datos del postulante en el formulario QR', datos,
+                  ayuda='Recomendado. Muestra solo parte del nombre, correo y teléfono (RF-10).') }}
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Guardar</button>
+      <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) if proceso else url_for('admin.procesos') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

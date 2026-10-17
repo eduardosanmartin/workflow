@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Usuarios{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <h1>Usuarios</h1>
+  <a class="boton primario-corto" href="{{ url_for('admin.usuario_nuevo') }}">Nuevo usuario</a>
+</div>
+<div class="tabla-desplazable">
+<table class="tabla-apilable">
+  <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Fases</th><th>Estado</th><th><span class="oculto">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for u in usuarios %}
+  <tr class="{{ '' if u.activo else 'inactivo' }}">
+    <td><a href="{{ url_for('admin.usuario', usuario_id=u.id) }}">{{ u.nombre }}</a></td>
+    <td data-etiqueta="Correo">{{ u.email }}</td>
+    <td data-etiqueta="Rol">{{ NOMBRE_ROL[u.rol] }}{% if u.puede_registrar_postulantes %} <small>· carga manual</small>{% endif %}</td>
+    <td data-etiqueta="Fases">{{ cantidad_fases[u.id] if u.rol == 'USUARIO_FASE' else 'Todas' }}</td>
+    <td data-etiqueta="Estado">
+      {% if not u.activo %}Inactivo
+      {% elif u.bloqueado_hasta and u.bloqueado_hasta > ahora %}<span class="alerta-texto">⚠ Bloqueado</span>
+      {% elif u.must_change_password %}Clave temporal
+      {% else %}Activo{% endif %}
+    </td>
+    <td class="acciones-fila">
+      {{ ui.boton_post(url_for('admin.usuario_restablecer', usuario_id=u.id), 'Restablecer clave', 'enlace',
+                       confirmar='¿Generar una nueva contraseña temporal para ' ~ u.nombre ~ '?') }}
+      {% if u.id != g.usuario.id %}
+        {% if u.activo %}
+        {{ ui.boton_post(url_for('admin.usuario_estado', usuario_id=u.id), 'Desactivar', 'enlace-peligro', {'activo': '0'},
+                         confirmar='¿Desactivar a ' ~ u.nombre ~ '?') }}
+        {% else %}
+        {{ ui.boton_post(url_for('admin.usuario_estado', usuario_id=u.id), 'Activar', 'enlace', {'activo': '1'}) }}
+        {% endif %}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -17,12 +17,13 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     limiter.init_app(app)
 
-    from app.blueprints import auth, principal
+    from app.blueprints import admin, auth, principal
     from app.security import cargar_usuario
 
     app.before_request(cargar_usuario)
     app.register_blueprint(auth.bp)
     app.register_blueprint(principal.bp)
+    app.register_blueprint(admin.bp)
 
     @app.context_processor
     def _roles():

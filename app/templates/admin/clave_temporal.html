@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titulo %}Contraseña temporal{% endblock %}
+{% block contenido %}
+<section class="tarjeta angosta">
+  <div class="mensaje mensaje-exito" role="status"><span class="icono" aria-hidden="true">✔</span>
+    <span>{{ 'Usuario creado' if nuevo else 'Contraseña restablecida' }}: {{ usuario.nombre }} ({{ usuario.email }}).</span></div>
+  <h1>Contraseña temporal</h1>
+  <p class="clave"><code>{{ clave }}</code></p>
+  <p>Entréguela a la persona por un canal seguro. <strong>No se volverá a mostrar.</strong>
+    En su primer ingreso, el sistema le pedirá cambiarla.</p>
+  <p><a href="{{ url_for('admin.usuarios') }}">Volver a usuarios</a></p>
+</section>
+{% endblock %}

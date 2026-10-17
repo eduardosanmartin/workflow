@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ fase.nombre if fase else 'Nueva fase' }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('admin.procesos') }}">Procesos</a> ›
+  <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) }}">{{ proceso.codigo }}</a> ›
+  {{ fase.nombre if fase else 'Nueva fase' }}</p>
+
+<section class="tarjeta media">
+  <h1>{{ 'Fase ' ~ fase.nombre if fase else 'Nueva fase de consulta' }}</h1>
+  {% if fase and fase.tipo != 'CONSULTA' %}
+  <p class="nota">Fase de sistema ({{ NOMBRE_TIPO[fase.tipo] }}): no se puede eliminar ni cambiar de tipo.</p>
+  {% endif %}
+  <form method="post">
+    {{ ui.csrf() }}
+    {% if iniciado %}<input type="hidden" name="identificador" value="{{ datos.identificador }}">{% endif %}
+    {{ ui.campo('identificador', 'Identificador', datos, ayuda='Código corto y único en el proceso. Ej.: BEC',
+                deshabilitado=iniciado, maximo=20) }}
+    {{ ui.campo('nombre', 'Nombre', datos, ayuda='Ej.: Becas y beneficios', maximo=100) }}
+    <label for="descripcion">Descripción</label>
+    <textarea id="descripcion" name="descripcion" rows="3">{{ datos.get('descripcion') or '' }}</textarea>
+    {% if not fase or fase.tipo == 'CONSULTA' %}
+    {{ ui.casilla('mostrar_en_qr', 'Ofrecer como tema de duda en el formulario QR', datos,
+                  ayuda='Desmarque las fases que solo se usan en flujos alternativos (ej.: Caja).') }}
+    {% endif %}
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Guardar</button>
+      <a href="{{ url_for('admin.proceso', proceso_id=proceso.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+
+{% if fase %}
+<section class="tarjeta media separada">
+  <h2>Responsables</h2>
+  <p class="nota">Atienden a los postulantes en esta fase y los derivan.
+    {% if fase.tipo == 'INICIAL' %}Los responsables de Iniciado son quienes inician procesos.{% endif %}
+    {% if proceso.estado == 'ACTIVO' %}Con el proceso activo, la fase debe conservar al menos un responsable.{% endif %}</p>
+  <form method="post" action="{{ url_for('admin.fase_responsables', fase_id=fase.id) }}">
+    {{ ui.csrf() }}
+    <fieldset class="lista-casillas">
+      <legend class="oculto">Usuarios responsables</legend>
+      {% for u in usuarios %}
+      <label class="casilla">
+        <input type="checkbox" name="usuarios" value="{{ u.id }}" {% if u.id in responsables %}checked{% endif %}>
+        {{ u.nombre }} <small>· {{ NOMBRE_ROL[u.rol] }} · {{ u.email }}</small>
+      </label>
+      {% else %}
+      <p class="nota">No hay usuarios activos.</p>
+      {% endfor %}
+    </fieldset>
+    <button type="submit" class="primario-corto">Guardar responsables</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
