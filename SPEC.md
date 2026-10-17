@@ -1,6 +1,23 @@
 # SPEC — Sistema WorkFlow
 
-> Versión: 0.7 · Fecha: 2026-10-15 · Estado: revisado, en desarrollo
+> Versión: 0.8 · Fecha: 2026-10-17 · Estado: aprobada (recorrido dinámico y flujos alternativos)
+>
+> **Cambios v0.8 (recorrido dinámico por fases):**
+> - El workflow deja de ser una secuencia fija. Cada postulante sigue una **ruta propia**: fase inicial → cero o más **fases de consulta** → **fase MNP**, donde idealmente completa la matrícula en forma digital, asistido en un tótem (RF-12).
+> - Hay dos variantes del **flujo principal**: **Principal 1 · ruta directa** (Iniciado → MNP), cuando el postulante no tiene dudas, y **Principal 2 · ruta con consultas** (Iniciado → Becas → … → MNP), cuando tiene dudas sobre becas, beneficios, pago u otros temas.
+> - **Cada fase puede cambiar el flujo:** al terminar una atención, el responsable define la fase siguiente (derivación). En la fase inicial se pregunta explícitamente si el postulante tiene dudas (RF-14).
+> - Se elimina el orden secuencial obligatorio (antigua RF-14). El `orden` de las fases pasa a ser solo de presentación.
+> - Nuevos estados de atención: `PLANIFICADA`, `EN_ESPERA`, `EN_ATENCION`, `COMPLETADO`, `COMPLETADO_CON_OBSERVACIONES`, `DERIVADA` y `ABANDONADA`. Se registran la llegada a la fila, el inicio y el fin de cada atención (RF-13).
+> - El proceso queda **completado (Matriculado)** al completarse la fase MNP (**cierre digital**) en el flujo principal, o al completarse la fase final de un **flujo alternativo manual** (**cierre manual**) (RF-16, RF-29).
+> - **MNP no es la fase final para todos.** Es la fase de sistema de **cierre digital** (tipo `CIERRE_DIGITAL`) y el destino del flujo principal. Si un caso no puede terminar en MNP (ej.: pago en efectivo y firma manual del contrato), se deriva a un **flujo alternativo manual**: una secuencia completa y fija de fases, definida por el Administrador, cuya última fase es la **fase final manual**. Puede haber varios flujos alternativos por proceso, y se puede entrar a ellos desde cualquier fase del flujo principal (RF-03, RF-29).
+> - El estado, las fases completadas, la actual y la siguiente se ven en el móvil del postulante y en la pantalla de los responsables, que se actualizan cada 10 s (RF-15, RF-17, RF-20).
+> - Reportería ampliada: tiempos de espera y de atención por fase, postulantes pendientes, matriculados y matriculados con observaciones, atención por fase y postulantes en espera (RF-18).
+> - Correcciones de la ruta y reapertura de atenciones por Gestor y Administrador (RF-27).
+> - En el modelo de datos, `atencion` reemplaza a `expediente_fase` y `fase` incorpora `tipo` y `mostrar_en_qr`. Se agregan `flujo_alternativo` y `flujo_alternativo_fase`, y `expediente` registra el flujo en curso y el tipo de cierre (§8).
+> - Diagramas de la §9.6 actualizados: flujos del proceso, configuración e inicio, recorrido por las fases, estados de una atención y estados del proceso.
+> - En el QR, el postulante indica si tiene dudas y sobre qué temas. El staff de la fase inicial confirma o ajusta la ruta (RF-10).
+> - Si el postulante abandona la fila, se marca como **"Abandonó"** y puede reactivarse si vuelve (RF-28).
+> - Las preguntas del nuevo flujo quedaron resueltas (§13). **MNP** significa **Matrícula No Presencial**: la plataforma web de matrícula de la universidad, que el postulante usa asistido en un tótem.
 >
 > **Cambios v0.7 (revisión técnica previa al desarrollo):**
 > - El número de atención es **correlativo por proceso**, sin reinicio diario, único por proceso, y guarda la fecha y hora de asignación para estadísticas (RF-19).
@@ -48,7 +65,7 @@
 
 ## 1. Objetivo
 
-Sistema web para **definir, configurar y mantener workflows** compuestos por fases ordenadas, y para **registrar el avance de cada postulante** a través de esas fases. Cada fase tiene usuarios responsables, que marcan su estado.
+Sistema web para **definir, configurar y mantener workflows** compuestos por fases, y para **registrar el recorrido de cada postulante** a través de esas fases. Cada fase tiene usuarios responsables, que atienden al postulante y deciden a qué fase debe continuar. El recorrido no es fijo: depende de las dudas de cada postulante.
 
 El caso de uso inicial es el **proceso de matrícula**. Aun así, el modelo debe ser genérico para poder reutilizarse en otros procesos, como admisión, titulación o beneficios. El sistema opera para **una sola sede**.
 
@@ -62,7 +79,8 @@ El caso de uso inicial es el **proceso de matrícula**. Aun así, el modelo debe
 - **Carga de datos de postulantes**: masiva desde CSV o Excel, y manual.
 - **Inicio de proceso** por dos vías: autoinicio por QR, o inicio por el staff que recibe al postulante.
 - Búsqueda de postulantes por RUT.
-- Seguimiento del estado de cada fase por postulante, respetando el orden definido.
+- Recorrido dinámico del postulante por las fases: fase inicial, fases de consulta según sus dudas y fase MNP (cierre digital), con derivación entre fases, y flujos alternativos manuales para los casos que no pueden terminar en MNP.
+- Registro de los tiempos de espera y de atención en cada fase.
 - Envío por correo al postulante del resumen del proceso y de su enlace único de seguimiento.
 - Vista de seguimiento del postulante, a la que se accede con el enlace único.
 - Tres roles con permisos diferenciados: Administrador, Gestor y Usuario de fase.
@@ -78,26 +96,42 @@ El caso de uso inicial es el **proceso de matrícula**. Aun así, el modelo debe
 - Firma electrónica de contratos.
 - Notificaciones por SMS o WhatsApp, y correos en cada cambio de fase (ver §12).
 - Integración en línea con sistemas académicos externos. La carga de postulantes es por archivo (RF-08).
+- Integración con la plataforma MNP (Matrícula No Presencial) o con el tótem donde se usa. El sistema solo registra el resultado que marca el responsable de MNP (RF-03).
 
 ## 3. Glosario
 
 | Término | Definición |
 |---|---|
-| **Proceso / Workflow** | Conjunto ordenado de fases que debe recorrer un postulante (ej.: "Matrícula 2027"). |
+| **Proceso / Workflow** | Conjunto de fases por las que puede pasar un postulante (ej.: "Matrícula 2027"). Tiene una fase inicial, una fase de cierre digital (MNP), cero o más fases de consulta y cero o más flujos alternativos. |
 | **Proceso iniciado** | Proceso que ya tiene al menos un expediente creado. Su estructura de fases queda bloqueada (RF-05). |
-| **Fase** | Etapa del proceso (ej.: Iniciado, Finanzas, Contrato, Becas). Tiene identificador, descripción, orden y responsables. |
+| **Fase** | Lugar de atención del proceso (ej.: Iniciado, Becas, Finanzas, MNP). Tiene identificador, descripción, tipo, orden de presentación y responsables. |
+| **Fase inicial ("Iniciado")** | Fase de sistema donde el staff recibe al postulante, inicia su proceso y pregunta si tiene dudas para definir su ruta (RF-03, RF-14). |
+| **Fase de consulta** | Fase opcional donde el postulante aclara dudas (ej.: Becas, Beneficios, Finanzas). Solo la visita si fue derivado a ella. |
+| **Fase de cierre digital (MNP)** | Fase de sistema, obligatoria, donde el postulante completa la matrícula en la plataforma web **MNP (Matrícula No Presencial)**, asistido en un tótem. Es el destino del flujo principal y donde idealmente concluye el proceso, pero no es la fase final para todos (ver flujo alternativo). Al completarla, queda Matriculado (RF-03, RF-16). |
+| **Flujo principal** | Recorrido que termina en MNP: Iniciado → MNP (ruta directa) o Iniciado → fases de consulta → MNP (ruta con consultas). Es dinámico: cada fase puede cambiar la ruta (RF-12, RF-14). |
+| **Flujo alternativo (manual)** | Secuencia completa y fija de fases, definida por el Administrador, para los casos que no pueden terminar en MNP (ej.: "Pago en efectivo": Finanzas → Caja → Firma de contrato). Su última fase es la fase final manual. Un proceso puede tener varios (RF-29). |
+| **Fase final manual** | Última fase de un flujo alternativo. Al completarla, con el detalle del cierre, el expediente queda Matriculado por **cierre manual**, fuera de MNP (RF-29). |
+| **Ruta** | Secuencia de atenciones de un expediente: empieza en la fase inicial, sigue con las fases de consulta que correspondan y termina en MNP (flujo principal) o en la fase final manual de un flujo alternativo. Es propia de cada postulante y puede cambiar durante el recorrido (RF-12). |
+| **Ruta directa (Principal 1)** | Ruta sin fases de consulta: Iniciado → MNP. |
+| **Ruta con consultas (Principal 2)** | Ruta con una o más fases de consulta entre Iniciado y MNP. |
+| **Atención** | Paso de la ruta: la visita del postulante a una fase. Registra su estado y los tiempos de espera y de atención (RF-13). Una misma fase puede tener más de una atención en la ruta. |
+| **Estado de atención** | `PLANIFICADA`, `EN_ESPERA`, `EN_ATENCION`, `COMPLETADO`, `COMPLETADO_CON_OBSERVACIONES`, `DERIVADA` o `ABANDONADA` (RF-13). |
+| **Abandono** | Estado del expediente cuando el postulante se retira de la fila sin ser atendido. Se puede reactivar si vuelve (RF-28). |
+| **Derivación** | Acción con que el responsable de una fase define o cambia las fases siguientes de la ruta (RF-14). |
+| **Fase actual** | Fase de la atención que está `EN_ESPERA` o `EN_ATENCION`: donde el postulante debe estar. |
+| **Fase siguiente** | Fase de la primera atención `PLANIFICADA` después de la fase actual. |
+| **Tiempo de espera** | Tiempo entre que el postulante queda `EN_ESPERA` en una fase y el inicio de su atención. |
+| **Tiempo de atención** | Tiempo entre el inicio y el fin de una atención. |
 | **Postulante** | Persona que recorre el proceso. Se identifica por su RUT. |
 | **Carga de datos** | Registro de los datos de un postulante, manual o masivo. **No inicia su proceso** ni crea expediente. |
-| **Inicio de proceso** | Acción que crea el expediente del postulante y completa la fase "Iniciado". Se hace **solo** por QR o por un responsable de la fase "Iniciado". |
+| **Inicio de proceso** | Acción que crea el expediente del postulante. Se hace **solo** por QR o por un responsable de la fase inicial. |
 | **Carreras de interés** | Hasta tres carreras del postulante, en orden de preferencia, elegidas del catálogo (RF-25). La primera es obligatoria. |
-| **Expediente** | Instancia de un proceso para un postulante concreto. Contiene el estado de cada fase. |
-| **Estado de fase** | Valor de una fase dentro de un expediente: `PENDIENTE`, `COMPLETADO` o `COMPLETADO_CON_OBSERVACIONES`. |
-| **Proceso pendiente** | Estado final de un expediente que no completó todas sus fases cuando se cerró el proceso (RF-16). |
-| **Fase habilitada** | Fase cuyas fases anteriores ya están completas, por lo que puede marcarse (RF-14). |
-| **Fase actual** | Primera fase pendiente de un expediente. |
-| **Enlace de seguimiento** | URL única y no adivinable con la que el postulante ve su workflow (RF-20). Se envía por correo y es la misma que se obtiene por QR. |
+| **Expediente** | Instancia de un proceso para un postulante concreto. Contiene su ruta y sus atenciones. |
+| **Matriculado** | Estado final del expediente cuando se completa la fase MNP (cierre digital) o la fase final manual de un flujo alternativo (cierre manual, RF-29). Si alguna atención terminó con observaciones, queda como "Matriculado con observaciones" para efectos de reportería (RF-16). |
+| **Proceso pendiente** | Estado final de un expediente que no quedó Matriculado cuando se cerró el proceso (RF-16). |
+| **Enlace de seguimiento** | URL única y no adivinable con la que el postulante ve su recorrido (RF-20). Se envía por correo y es la misma que se obtiene por QR. |
 | **Número de atención** | Código correlativo que se entrega al postulante al iniciar el proceso (ej.: `M-0042`). |
-| **Responsable** | Usuario del sistema asignado a una fase. Puede cambiar su estado. Los responsables de "Iniciado" son quienes inician procesos. |
+| **Responsable** | Usuario del sistema asignado a una fase. Atiende a los postulantes en esa fase y los deriva. Los responsables de la fase inicial son quienes inician procesos. |
 
 ## 4. Roles y permisos
 
@@ -115,14 +149,19 @@ El caso de uso inicial es el **proceso de matrícula**. Aun así, el modelo debe
 | **Inicio de proceso** (staff) | ✅ | ✅ | 🧩 (**) |
 | Buscar postulante y ver todas sus fases y estados | ✅ | ✅ | ✅ |
 | Reenviar el correo con el enlace de seguimiento | ✅ | ✅ | ✅ |
-| Cambiar el estado de **cualquier** fase habilitada | ✅ | ✅ | ❌ |
-| Cambiar el estado de **sus** fases habilitadas | ✅ | ✅ | ✅ |
+| Atender, finalizar y derivar en **cualquier** fase | ✅ | ✅ | ❌ |
+| Atender, finalizar y derivar en **sus** fases | ✅ | ✅ | ✅ |
+| Configurar flujos alternativos (RF-29) | ✅ | ❌ | ❌ |
+| Derivar a un flujo alternativo o devolver al flujo principal (RF-29) | ✅ | ✅ | ✅ (solo desde su fase actual) |
+| Corregir la ruta y reabrir atenciones (RF-27) | ✅ | ✅ | ❌ |
+| Marcar "Abandonó" y reactivar (RF-28) | ✅ | ✅ | 🧩 (****) |
 | Acceder a reportería | ✅ | ✅ | ❌ |
 | Consultar la auditoría | ✅ completa | 👁️ (***) | ❌ |
 
 (\*) ⚙️ Solo si el Administrador le habilitó el permiso `puede_registrar_postulantes`. **Por defecto está deshabilitado.**
 (\*\*) 🧩 Solo si es **responsable de la fase "Iniciado"** del proceso activo. Es coherente con la regla general de que cada usuario actúa sobre sus fases. La edición de datos la puede hacer solo **durante el inicio de proceso** (RF-09).
-(\*\*\*) 👁️ Solo lectura, y solo la auditoría de expedientes y postulantes: inicios, cambios de estado, cargas, ediciones de datos y correos. No ve la auditoría de configuración, usuarios ni sesiones (RF-24).
+(\*\*\*) 👁️ Solo lectura, y solo la auditoría de expedientes y postulantes: inicios, atenciones, derivaciones, cargas, ediciones de datos y correos. No ve la auditoría de configuración, usuarios ni sesiones (RF-24).
+(\*\*\*\*) 🧩 Solo en la fase actual del expediente, si es responsable de ella. También puede reactivar el responsable de "Iniciado".
 
 **Regla:** todo usuario con rol *Usuario de fase* debe tener **al menos una fase asignada**. El sistema no permite guardar un usuario de fase sin fases, ni quitarle su última fase, ni eliminar una fase que sea la última de algún usuario (se informa qué usuarios deben reasignarse antes). La regla **no aplica** al Administrador ni al Gestor, que ya pueden actuar sobre todas las fases.
 
@@ -135,18 +174,28 @@ El caso de uso inicial es el **proceso de matrícula**. Aun así, el modelo debe
 - Estados del proceso:
   - **BORRADOR**: en configuración. No acepta inicios de proceso.
   - **ACTIVO**: acepta inicios de proceso.
-  - **CERRADO**: no acepta inicios ni cambios de estado, y los enlaces de seguimiento expiran. Al cerrar, todos sus expedientes quedan cerrados (`cerrado_en`) y en modo de solo lectura, con el estado global que tenían en ese momento. Los que no completaron todas las fases quedan con estado **"Proceso pendiente"** (RF-16) y siguen disponibles en la reportería hasta la eliminación de los datos (RF-26). El cierre exige una confirmación que indica cuántos expedientes quedarán como "Proceso pendiente".
+  - **CERRADO**: no acepta inicios, atenciones ni derivaciones, y los enlaces de seguimiento expiran. Al cerrar, todos sus expedientes quedan cerrados (`cerrado_en`) y en modo de solo lectura, con el estado global que tenían en ese momento. Los que no quedaron Matriculados quedan con estado **"Proceso pendiente"** (RF-16) y siguen disponibles en la reportería hasta la eliminación de los datos (RF-26). El cierre exige una confirmación que indica cuántos expedientes quedarán como "Proceso pendiente".
 - Solo puede haber **un proceso ACTIVO a la vez**. El QR y el inicio por staff usan siempre ese proceso, sin que haya que elegirlo. Para activar un proceso, el que esté activo debe cerrarse antes.
-- Para activar un proceso, todas sus fases, incluida "Iniciado", deben tener al menos un responsable.
+- Para activar un proceso, este debe tener exactamente una fase inicial, exactamente una fase de cierre digital (MNP), todas sus fases deben tener al menos un responsable y cada flujo alternativo activo debe tener al menos una fase (RF-29).
 
 **RF-02 — Gestión de fases.** Dentro de un proceso, el Administrador puede crear, editar, reordenar y eliminar fases, con las restricciones de RF-05.
-- Atributos obligatorios: `identificador` (código único dentro del proceso, ej.: `FIN`), `nombre`, `descripción` y `orden` (entero, único dentro del proceso).
-- El orden define la secuencia **obligatoria** en que se completan las fases (RF-14).
+- Atributos obligatorios: `identificador` (código único dentro del proceso, ej.: `BEC`), `nombre`, `descripción`, `tipo` y `orden` (entero, único dentro del proceso). Las fases de consulta tienen además `mostrar_en_qr` (sí/no, por defecto sí): indica si se ofrecen como tema de duda en el formulario QR (RF-10). Las fases que solo se usan en flujos alternativos (ej.: Caja, Firma de contrato) se configuran con "no".
+- Tipos de fase:
+  - **INICIAL**: una por proceso, de sistema (RF-03).
+  - **CONSULTA**: cero o más. Son opcionales para el postulante: solo las visita si lo derivan a ellas (ej.: Becas, Beneficios, Finanzas). También son las fases que componen los flujos alternativos (RF-29). Una misma fase puede usarse como consulta en el flujo principal y en uno o más flujos alternativos, con los mismos responsables y la misma bandeja.
+  - **CIERRE_DIGITAL**: una por proceso, de sistema. En matrícula es MNP (RF-03).
+- El `orden` **ya no define la secuencia del recorrido**: se usa para presentar las fases en las pantallas y como orden sugerido al elegir fases de consulta. La secuencia real la define la ruta de cada postulante (RF-12).
 
-**RF-03 — Fase inicial "Iniciado".** Todo proceso tiene una fase inicial de sistema (orden 1), que no se puede eliminar ni reordenar.
-- Como cualquier fase, tiene **responsables asignados**: son los usuarios del staff que reciben a los postulantes e inician su proceso (RF-09).
-- Se marca `COMPLETADO` cuando se crea el expediente, por cualquiera de las dos vías de inicio (§5.3).
-- No se puede revertir a `PENDIENTE`, porque su completitud equivale a la existencia del expediente.
+**RF-03 — Fases de sistema: inicial y de cierre digital (MNP).** Todo proceso tiene dos fases de sistema que no se pueden eliminar ni cambiar de tipo:
+- **Fase inicial "Iniciado"** (tipo INICIAL, se presenta primero):
+  - Sus responsables son los usuarios del staff que reciben a los postulantes, inician su proceso (RF-09) y les preguntan si tienen dudas para definir su ruta (RF-14).
+  - Es siempre la primera atención de la ruta.
+  - Su atención completada no se puede revertir, porque equivale a la existencia del expediente. Si la ruta quedó mal definida, se corrige (RF-27).
+- **Fase de cierre digital** (tipo CIERRE_DIGITAL, se presenta al final). En el proceso de matrícula es la fase **MNP (Matrícula No Presencial)**, cuyo identificador y nombre son configurables:
+  - Allí el postulante completa la matrícula en la plataforma web MNP, asistido por el staff en un tótem. El sistema no se integra con la plataforma MNP: el responsable de la fase registra el resultado (§2.2).
+  - Es el **destino del flujo principal**: mientras el expediente está en el flujo principal, la ruta planificada siempre termina en MNP, y no se puede quitar de ella.
+  - **No es necesariamente la última fase del postulante.** Si no hay dificultades, pasa de "Iniciado" directamente a MNP, donde idealmente concluye el proceso. Si tiene dudas o dificultades, primero lo derivan a las fases de consulta idóneas y luego vuelve a MNP. Si el caso no puede terminar en MNP, se deriva a un **flujo alternativo manual** (RF-29): en ese caso MNP sale de la ruta y el proceso concluye en la fase final manual de ese flujo.
+  - Al completarse su atención, el expediente queda **Matriculado** por cierre digital (RF-16).
 
 **RF-04 — Asignación de responsables.** Cada fase tiene **uno o más** usuarios responsables, y un usuario puede ser responsable de **una o más** fases (relación N:M).
 - Los responsables se pueden cambiar en cualquier momento, incluso con el proceso iniciado (por ejemplo, por reemplazo de personal).
@@ -154,8 +203,8 @@ El caso de uso inicial es el **proceso de matrícula**. Aun así, el modelo debe
 
 **RF-05 — Bloqueo de la estructura del workflow.** Un proceso se considera **iniciado** desde que se crea su primer expediente.
 - **Proceso no iniciado** (nuevo, o existente sin expedientes): se pueden agregar, eliminar y reordenar fases libremente.
-- **Proceso iniciado:** **no se pueden** agregar, eliminar ni reordenar fases. Los controles correspondientes se ocultan en la interfaz, y el servidor rechaza el intento.
-- En un proceso iniciado solo se pueden modificar textos que no alteran el flujo: nombre y descripción de las fases, y descripción del proceso. Estos cambios quedan auditados.
+- **Proceso iniciado:** **no se pueden** agregar ni eliminar fases, ni cambiar su tipo. Los controles correspondientes se ocultan en la interfaz, y el servidor rechaza el intento.
+- En un proceso iniciado solo se pueden modificar aspectos que no alteran las rutas existentes: nombre y descripción de las fases, orden de presentación, `mostrar_en_qr`, nombre y descripción de los flujos alternativos, y descripción del proceso. Tampoco se pueden crear ni eliminar flujos alternativos, ni cambiar sus fases o su orden (RF-29). Estos cambios quedan auditados.
 - Si se necesita otra estructura, se crea un proceso nuevo, idealmente clonando el existente (ver §12).
 
 ### 5.2 Carga de datos de postulantes
@@ -221,7 +270,10 @@ Flujo:
    - Como tiene al postulante enfrente, el usuario **puede corregir cualquier dato ya registrado, excepto el RUT** (por ejemplo, un teléfono que cambió o una carrera distinta). Cada corrección queda auditada con el valor anterior y el nuevo.
 3. **Si el RUT no existe:** se despliega el formulario vacío con los campos de RF-06 y el RUT precargado. El usuario ingresa los datos que le entrega el postulante. Esto **es parte del inicio de proceso** y no requiere el permiso de carga manual.
 4. **Si el postulante ya tiene expediente** en el proceso activo, no se crea otro. Se muestra el expediente existente, con la opción de reenviar el enlace.
-5. Al confirmar, se crea el expediente (RF-11) y se muestra el número de atención para entregárselo al postulante.
+5. Con los datos completos, el responsable pregunta al postulante **si tiene dudas** (becas, beneficios, pago, etc.) y define su ruta (RF-14):
+   - **Sin dudas:** ruta directa a MNP.
+   - **Con dudas:** elige una o más fases de consulta, en el orden en que debe visitarlas. MNP queda al final de la ruta planificada.
+6. Al confirmar, se crea el expediente (RF-11), la atención de "Iniciado" queda completada y el postulante queda `EN_ESPERA` en la primera fase de su ruta. Se muestra el número de atención y la fase a la que debe dirigirse.
 
 **RF-10 — Inicio por QR (autoinicio).** Un QR "Inicia aquí" lleva a un formulario público (sin login) optimizado para móvil. Si no hay un proceso ACTIVO, **no se muestra el formulario**: solo el mensaje *"El proceso de matrícula no está abierto"*. Tampoco se aceptan envíos directos al formulario.
 
@@ -239,7 +291,9 @@ Flujo:
    - Si sus datos están incorrectos, se le indica que los corrija con el staff.
 3. **Si el RUT no existe:** el postulante completa el formulario con todos los campos de RF-06.
 4. **Si el postulante ya tiene expediente** en el proceso activo, no se crea otro. Se le reenvía el enlace **a su correo registrado** y se le muestra el mensaje *"Te enviamos tu enlace a j\*\*\*@gmail.com"*. El enlace no se muestra en pantalla, para no exponer el expediente a quien solo conoce el RUT.
-5. Al enviar, se crea el expediente (RF-11) y se redirige al postulante a su enlace de seguimiento (RF-20), que muestra su número de atención. **Es el mismo enlace que recibe por correo.**
+5. Antes de enviar, el formulario pregunta *"¿Tienes dudas sobre alguno de estos temas?"* y muestra las fases de consulta del proceso con `mostrar_en_qr = sí`, con un nombre comprensible para el postulante (ej.: Becas, Beneficios, Pago). El postulante puede marcar una o más, o indicar que no tiene dudas.
+6. Al enviar, se crea el expediente (RF-11) y se redirige al postulante a su enlace de seguimiento (RF-20), que muestra su número de atención. **Es el mismo enlace que recibe por correo.**
+7. El postulante queda `EN_ESPERA` en la fase inicial, con una **ruta propuesta** según lo que marcó. Un responsable de "Iniciado" lo atiende, revisa con él sus dudas y **confirma o ajusta la ruta** (RF-14). Su vista de seguimiento le indica que se dirija a la fase inicial.
 
 Protección contra abuso:
 - Límite de solicitudes por IP y CAPTCHA.
@@ -248,8 +302,9 @@ Protección contra abuso:
 
 **RF-11 — Creación del expediente.** Ocurre al confirmar el inicio, por cualquiera de las dos vías, en el proceso ACTIVO. En una sola transacción:
 - Se crea el postulante, si no existía, o se actualizan sus datos. En el QR solo se completan los pendientes; en el inicio por staff también se aplican las correcciones. Queda registrado el origen (`INICIO_STAFF` o `INICIO_QR`).
-- Se generan registros para todas las fases del proceso, con estado `PENDIENTE`.
-- La fase "Iniciado" queda `COMPLETADO`, registrando quién la completó: el usuario del staff, o `PUBLICO` en el caso del QR.
+- Se crea la ruta del expediente, que siempre empieza con la atención de la fase inicial:
+  - **Inicio por staff:** la atención de "Iniciado" queda `COMPLETADO`, con el usuario del staff como responsable. Se crean las atenciones de la ruta definida (RF-14): la primera queda `EN_ESPERA` y las demás `PLANIFICADA`, con MNP al final.
+  - **Inicio por QR:** la atención de "Iniciado" queda `EN_ESPERA`, registrando el origen `PUBLICO`. Se crean como `PLANIFICADA` las atenciones de las fases de consulta que marcó el postulante (ruta propuesta) y la de MNP. Un responsable de "Iniciado" confirma o ajusta esa ruta al atenderlo.
 - Se asigna un número de atención (RF-19).
 - Se genera el token del enlace de seguimiento (RF-20).
 
@@ -257,51 +312,139 @@ Después de confirmar la transacción, se envía el correo de inicio al postulan
 
 Un postulante puede tener **un solo expediente por proceso**.
 
-### 5.4 Gestión de estados de fase
+### 5.4 Recorrido del postulante por las fases
 
-**RF-12 — Estados posibles.** `PENDIENTE` (valor por defecto), `COMPLETADO` y `COMPLETADO_CON_OBSERVACIONES`.
-- Si el responsable no marca la fase, el estado sigue siendo `PENDIENTE`.
+**RF-12 — Ruta del expediente.** Cada expediente tiene una **ruta**: la secuencia ordenada de atenciones que recorre el postulante.
+- Siempre empieza con la fase inicial, y la ruta planificada termina en MNP. Entre ambas puede haber **cero o más fases de consulta**, en el orden que definan los responsables.
+- Hay tres tipos de recorrido:
+  - **Principal 1 · Ruta directa:** el postulante tiene todos sus antecedentes y no tiene dudas. El staff de la fase inicial lo deriva directamente a MNP, donde completa la matrícula. Ruta: Iniciado → MNP.
+  - **Principal 2 · Ruta con consultas:** el postulante tiene dudas sobre uno o más temas. El staff de la fase inicial lo deriva a la fase de consulta que corresponda. Al aclarar sus dudas, el responsable de esa fase lo deriva a otra fase de consulta o a MNP. Ruta, por ejemplo: Iniciado → Becas → Finanzas → MNP.
+  - **Alternativo manual:** el caso no puede terminar en MNP (ej.: pago en efectivo y firma manual del contrato). Desde cualquier fase del flujo principal, el responsable lo deriva a un flujo alternativo, que sigue una secuencia fija hasta su fase final manual (RF-29). Ruta, por ejemplo: Iniciado → Becas → *[Pago en efectivo]* Finanzas → Caja → Firma de contrato.
+- Una fase de consulta puede aparecer más de una vez en la misma ruta (por ejemplo, si el postulante debe volver a Finanzas).
+- La **fase actual** es la de la atención que está `EN_ESPERA` o `EN_ATENCION`. La **fase siguiente** es la de la primera atención `PLANIFICADA` que viene después.
 
-**RF-13 — Cambio de estado.** El responsable de una fase, o un Gestor o Administrador, puede cambiar su estado para un postulante, siempre que la fase esté **habilitada** (RF-14).
-- `COMPLETADO_CON_OBSERVACIONES` exige ingresar un texto de observación.
-- Se registran quién hizo el cambio, cuándo y el valor anterior.
-- Se permite volver a `PENDIENTE` (por ejemplo, para corregir un error), con estas condiciones:
-  - La acción exige un motivo y queda auditada.
-  - Solo se permite si **todas las fases posteriores están `PENDIENTE`**. Para revertir una fase intermedia, primero hay que revertir las posteriores, de la última hacia atrás.
-  - La fase "Iniciado" nunca se revierte (RF-03).
+**RF-13 — Estados de una atención.**
 
-**RF-14 — Orden secuencial obligatorio.** Las fases se completan **estrictamente en el orden definido**, y la regla aplica a todos los roles.
-- Una fase está **habilitada** solo si todas las fases de menor orden están `COMPLETADO` o `COMPLETADO_CON_OBSERVACIONES`.
-- En una fase no habilitada, los controles de cambio de estado aparecen deshabilitados, con el mensaje *"Requiere completar: «nombre de la fase anterior pendiente»"*.
-- El servidor valida la regla: un intento de cambiar el estado de una fase no habilitada se rechaza aunque se haga directamente por API.
+| Estado | Significado | Qué se registra |
+|---|---|---|
+| `PLANIFICADA` | Está en la ruta, pero aún no le toca. | Quién la planificó y cuándo |
+| `EN_ESPERA` | Es la fase actual: el postulante debe dirigirse a ella y espera ser atendido. | `en_espera_desde` |
+| `EN_ATENCION` | El responsable comenzó a atenderlo (botón *"Atender"*). | `inicio_atencion` y `atendido_por` |
+| `COMPLETADO` | El responsable terminó la atención. | `fin_atencion` |
+| `COMPLETADO_CON_OBSERVACIONES` | Terminó la atención con observaciones. Exige un texto de observación. | `fin_atencion` y `observacion` |
+| `DERIVADA` | La atención se interrumpió porque el postulante fue derivado a otra fase antes de terminarla (ej.: en MNP surge una duda sobre el pago). La fase vuelve a planificarse más adelante en la ruta. | `fin_atencion` y la fase a la que se derivó |
+| `ABANDONADA` | El postulante se retiró de la fila sin ser atendido (RF-28). | `fin_atencion` y quién la marcó |
 
-**RF-15 — Consulta y visibilidad.** Cualquier usuario autenticado puede buscar un postulante por RUT y ver su ficha, con los datos y **todas** las fases en orden. Para cada fase se muestran su estado, fecha, responsable y observaciones.
-- Se destaca visualmente la **fase actual**.
-- Los controles de cambio de estado solo están habilitados en las fases que el usuario puede modificar según su rol (§4) y que además están habilitadas (RF-14).
+- Cada expediente tiene **como máximo una atención** `EN_ESPERA` o `EN_ATENCION` a la vez.
+- Al completarse una atención, la siguiente `PLANIFICADA` pasa automáticamente a `EN_ESPERA`, con `en_espera_desde` igual a la hora de la derivación.
+- La atención de la fase final manual de un flujo alternativo queda `COMPLETADO` o `COMPLETADO_CON_OBSERVACIONES`, con el detalle del cierre (RF-29).
+- Con estos registros se calculan el **tiempo de espera** (`inicio_atencion − en_espera_desde`) y el **tiempo de atención** (`fin_atencion − inicio_atencion`) de cada atención, para auditoría y reportería (RF-18, RF-24).
+- Si el responsable finaliza sin haber presionado *"Atender"*, el sistema le pide confirmar y registra el inicio igual al fin, marcando la atención como "sin tiempo de atención" en los reportes.
+
+**RF-14 — Derivación: cada fase puede cambiar el flujo.**
+- **En la fase inicial**, la pantalla pregunta explícitamente *"¿El postulante tiene dudas?"*:
+  - **No:** la ruta queda directa a MNP.
+  - **Sí:** el responsable elige una o más fases de consulta según las dudas (becas, beneficios, pago, etc.), en el orden en que debe visitarlas. MNP queda al final.
+  - Si el postulante inició por QR, la pantalla muestra preseleccionadas las fases que él marcó (RF-10, paso 5). El responsable las confirma o las ajusta.
+- **Al finalizar una atención en cualquier fase**, el responsable confirma o modifica el resto de la ruta: puede agregar, quitar o reordenar las fases de consulta `PLANIFICADA`. Por defecto se propone la ruta que ya estaba planificada. También puede derivarlo a un **flujo alternativo** si el caso no puede terminar en MNP (RF-29).
+- **Durante una atención**, el responsable también puede derivar al postulante a una fase de consulta antes de terminarla. **Si en MNP el postulante no logra completar la matrícula en el tótem** (ej.: falta un documento o surge una duda sobre el pago), el responsable de MNP lo deriva a la fase apropiada. La atención actual queda `DERIVADA`, la nueva fase pasa a `EN_ESPERA` y la fase interrumpida se vuelve a planificar a continuación. Esto permite, por ejemplo, que desde MNP se envíe al postulante a Finanzas y que luego vuelva a MNP.
+- En el flujo principal, MNP no se puede quitar de la ruta planificada y siempre queda al final de ella. Solo sale de la ruta al derivar a un flujo alternativo (RF-29).
+- Estas reglas de derivación aplican al flujo principal. Dentro de un flujo alternativo, la secuencia es fija (RF-29).
+- Al derivar, el cambio se ve de inmediato:
+  - En el móvil del postulante: *"Dirígete a: Becas"* (RF-20).
+  - En la bandeja de los responsables de la fase de destino: el postulante aparece en espera de atención (RF-17).
+- Cada derivación queda auditada con la fase de origen, la de destino, el usuario y la hora (RF-24).
+- Pueden atender, finalizar y derivar los responsables de la **fase actual** del expediente, además del Gestor y el Administrador (§4). El servidor rechaza actuar sobre una atención que no es la actual, aunque se intente por API.
+
+**RF-15 — Consulta y visibilidad.** Cualquier usuario autenticado puede buscar un postulante por RUT y ver su ficha, con sus datos y su recorrido:
+- Estado global del expediente (RF-16).
+- Flujo en curso: principal o el nombre del flujo alternativo.
+- Fases completadas, con su hora de inicio y de fin, el responsable y las observaciones.
+- **Fase actual**, destacada visualmente, con su estado (`EN_ESPERA` o `EN_ATENCION`) y el tiempo transcurrido.
+- **Fase siguiente** y el resto de la ruta planificada.
+- Historial de derivaciones: desde qué fase, hacia cuál, quién y cuándo.
+- Los controles de *"Atender"*, *"Finalizar y derivar"*, *"Derivar ahora"*, *"Derivar a flujo alternativo"* y *"Devolver al flujo principal"* solo están habilitados si el usuario puede actuar sobre la fase actual según su rol (§4).
 
 **RF-16 — Estado global del expediente.**
-- **Matriculado**: todas las fases están `COMPLETADO` o `COMPLETADO_CON_OBSERVACIONES`.
-- **No matriculado aún**: al menos una fase está `PENDIENTE` y el proceso sigue ACTIVO.
-- **Proceso pendiente**: al menos una fase quedó `PENDIENTE` cuando el proceso se cerró. Es un estado final: el expediente queda en solo lectura.
-- El estado global es calculado y no se edita a mano.
+- **No matriculado aún** (`EN_CURSO`): aún no se completa MNP ni la fase final de un flujo alternativo, y el proceso sigue ACTIVO.
+- **Matriculado** (`MATRICULADO`): se completó la atención de MNP en el flujo principal (**cierre digital**) o la de la fase final de un flujo alternativo (**cierre manual**, RF-29). Se guardan el tipo de cierre (`DIGITAL` o `MANUAL`), la fase y, si corresponde, el flujo alternativo, para la reportería.
+  - Para la reportería, se distingue **"Matriculado con observaciones"** cuando alguna atención de la ruta terminó `COMPLETADO_CON_OBSERVACIONES`. El postulante ve igualmente "Matriculado".
+- **Abandonó** (`ABANDONO`): el postulante se retiró de la fila y fue marcado como abandono (RF-28). Sale de las bandejas hasta que se reactive.
+- **Proceso pendiente** (`PROCESO_PENDIENTE`): el proceso se cerró sin que el expediente quedara Matriculado. Incluye a los que estaban en "Abandonó", que se distinguen en los reportes. Se registra la fase en que quedó detenido. Es un estado final: el expediente queda en solo lectura.
+- El estado global lo calcula el sistema dentro de la misma transacción que cambia las atenciones, y se guarda en el expediente para la reportería. No se edita a mano.
+
+**RF-27 — Correcciones de la ruta.** El Gestor y el Administrador pueden corregir errores mientras el proceso está ACTIVO:
+- **Corregir la ruta:** agregar, quitar o reordenar fases de consulta `PLANIFICADA`.
+- **Reabrir la última atención completada:** vuelve a `EN_ESPERA`, y la atención que estaba en espera vuelve a `PLANIFICADA`. Solo se permite si esa atención aún no ha comenzado. Si se reabre la atención que dejó al expediente Matriculado (la de MNP o la de la fase final manual), el expediente vuelve a "No matriculado aún". El correo de matrícula no se reenvía automáticamente al volver a completarla, pero se puede reenviar a mano.
+- La atención de la fase inicial no se reabre (RF-03).
+- En un flujo alternativo no se corrige la secuencia. Si el caso quedó en el flujo equivocado, se devuelve al flujo principal y, si corresponde, se deriva a otro flujo alternativo (RF-29).
+- Toda corrección exige un motivo y queda auditada.
+
+**RF-28 — Abandono y reactivación.**
+- Si un postulante en espera se retira, el responsable de la fase actual, el Gestor o el Administrador lo marca como **"Abandonó"**:
+  - La atención `EN_ESPERA` pasa a `ABANDONADA` y el expediente queda en estado `ABANDONO`.
+  - El postulante sale de la fila: deja de aparecer en la bandeja y en el reporte de postulantes en espera.
+  - Su vista de seguimiento muestra *"Tu atención quedó en pausa. Acércate a un punto de atención para retomarla"*.
+- Solo se puede marcar a un postulante `EN_ESPERA`. Si ya está en atención, el responsable finaliza o deriva.
+- **Reactivación:** si el postulante vuelve, un responsable de la fase en que abandonó, un responsable de "Iniciado", el Gestor o el Administrador lo reactiva desde su ficha (búsqueda por RUT):
+  - Se crea una nueva atención `EN_ESPERA` en la misma fase, o en otra si el responsable lo decide, y el expediente vuelve a `EN_CURSO`.
+  - El resto de la ruta planificada se conserva.
+- Al cerrar el proceso, los expedientes en `ABANDONO` pasan a "Proceso pendiente", indicando que hubo abandono.
+- Marcar abandono y reactivar exigen confirmación y quedan auditados.
+
+**RF-29 — Flujos alternativos manuales.** Si un caso no puede terminar en MNP (ej.: pago en efectivo y firma manual del contrato), el postulante pasa a un **flujo alternativo**: una secuencia completa y fija de fases que termina en una **fase final manual**, fuera de MNP.
+
+Configuración (Administrador):
+- Un proceso puede tener **cero o más** flujos alternativos. Cada uno tiene `código`, `nombre` (ej.: "Pago en efectivo"), `descripción` y una **secuencia ordenada de fases**.
+- Las fases del flujo son fases de consulta del proceso (RF-02). Una fase puede estar en el flujo principal y en uno o más flujos alternativos, con los mismos responsables y la misma bandeja. Una fase no se repite dentro de un mismo flujo.
+- La **última fase de la secuencia es la fase final manual** del flujo.
+- Los flujos alternativos son parte de la estructura del workflow: una vez iniciado el proceso, no se pueden crear ni eliminar, ni cambiar sus fases o su orden. Solo se pueden editar su nombre y su descripción (RF-05).
+
+Entrada al flujo alternativo:
+- Desde **cualquier fase del flujo principal** (Iniciado, una fase de consulta o MNP), el responsable de la fase actual, el Gestor o el Administrador elige *"Derivar a flujo alternativo"*, selecciona el flujo y la **fase de entrada**, que puede ser cualquiera de su secuencia, según el caso.
+- En el inicio por staff, el responsable de "Iniciado" puede elegir un flujo alternativo como ruta desde el comienzo.
+- Efectos, en una sola transacción:
+  - La atención actual queda `COMPLETADO`, `COMPLETADO_CON_OBSERVACIONES` o, si se interrumpe, `DERIVADA`. En este caso no se vuelve a planificar.
+  - Las atenciones `PLANIFICADA` del flujo principal, incluida MNP, se quitan de la ruta y quedan registradas en la auditoría.
+  - Se crean las atenciones del flujo alternativo, desde la fase de entrada hasta la fase final: la primera `EN_ESPERA` y las demás `PLANIFICADA`.
+  - El expediente registra el flujo alternativo en curso.
+
+Recorrido dentro del flujo alternativo:
+- La secuencia es **estricta**: al finalizar una atención, el postulante pasa automáticamente a la fase siguiente del flujo. No se agregan, quitan ni reordenan fases, y no se deriva a otras fases.
+- Siguen aplicando la bandeja, *"Atender"*, los tiempos de espera y de atención, el abandono y la reactivación (RF-13, RF-17, RF-28).
+- **Devolver al flujo principal:** si el caso cambia y sí puede terminar en MNP, el responsable de la fase actual, el Gestor o el Administrador devuelve al postulante al flujo principal, con un motivo. Las atenciones `PLANIFICADA` del flujo alternativo se quitan de la ruta, y el responsable define la ruta principal como en la fase inicial: fases de consulta, si corresponde, y MNP al final (RF-14). El expediente vuelve al flujo principal.
+
+Cierre manual:
+- La fase final manual se finaliza con *"Cerrar matrícula manualmente"*, que exige un **detalle del cierre** (ej.: "Pago en efectivo, boleta 12345; contrato firmado en papel") y una confirmación explícita.
+- El expediente queda **Matriculado**, con tipo de cierre `MANUAL`, la fase final y el flujo alternativo, y se envía el correo de matrícula completada (RF-21).
+- El postulante ve "Matriculado", igual que con el cierre digital. No ve el detalle del cierre ni el nombre del flujo.
+- Un cierre manual registrado por error se corrige reabriendo la atención (RF-27).
+- La entrada al flujo, la devolución al flujo principal y el cierre manual quedan auditados con el usuario, la fase, la hora y el motivo o detalle (RF-24).
 
 ### 5.5 Bandeja de trabajo
 
-**RF-17 — Bandeja por fase.** Cada Usuario de fase ve la lista de postulantes cuya **fase actual** es una de las fases que tiene asignadas, es decir, los que están esperando ser atendidos por él.
-- La lista se ordena por número de atención.
-- Se puede filtrar por fecha y por carrera, y ver también los postulantes que aún vienen en fases anteriores.
-- Desde la bandeja se accede directamente al expediente.
-- Los responsables de "Iniciado" tienen además acceso directo a la pantalla *"Iniciar proceso"* (RF-09).
+**RF-17 — Bandeja por fase.** Cada responsable ve, para las fases que tiene asignadas:
+- **En espera de atención:** los postulantes `EN_ESPERA` en sus fases, ordenados por llegada a la fila (`en_espera_desde`). Para cada uno se muestran el número de atención, el nombre, la fase de la que viene y el **tiempo que lleva esperando**.
+- **En atención:** los postulantes `EN_ATENCION` en sus fases, con quién los atiende y desde qué hora.
+- **Próximos:** los postulantes cuya fase siguiente es una de sus fases, para anticipar la demanda.
+- Acciones directas: *"Atender"*, *"Finalizar y derivar"* y *"Abandonó"*. Para los postulantes en un flujo alternativo, la bandeja muestra el nombre del flujo y, en su fase final, *"Finalizar"* se reemplaza por *"Cerrar matrícula manualmente"* (RF-29).
+- La bandeja se actualiza automáticamente **cada 10 segundos**.
+- Se puede filtrar por fecha y por carrera.
+- Los responsables de "Iniciado" tienen además acceso directo a la pantalla *"Iniciar proceso"* (RF-09). Ven en espera a los postulantes que iniciaron por QR, con la ruta que propusieron (RF-10, paso 7).
 
 ### 5.6 Reportería (Gestor y Administrador)
 
 **RF-18 — Reportes.**
-- Lista de expedientes con su estado global y su fase actual, con filtros por proceso, fecha, fase, estado y carrera.
-- Avance por fase: cantidad de expedientes detenidos en cada fase (embudo).
+- **Estado de los postulantes:** cantidad y lista de expedientes **pendientes** (no matriculados aún, abandonos y "Proceso pendiente"), **matriculados** y **matriculados con observaciones**, distinguiendo el tipo de cierre: digital (MNP) o manual, por flujo alternativo.
+- **Abandonos:** cantidad por fase y por día, tiempo de espera antes del abandono y cuántos se reactivaron. Con filtros por proceso, fecha, fase actual, carrera y tipo de ruta (directa o con consultas).
+- **Postulantes en espera de atención** (en tiempo real): por fase, con su número de atención, el tiempo que llevan esperando y la fase de la que vienen. Incluye a los que están en atención.
+- **Atención por fase:** cantidad de atenciones, **tiempo de espera** y **tiempo de atención** (promedio, mediana y máximo), por fase, responsable, día y hora.
+- **Tiempo total del recorrido:** desde la creación del expediente hasta la matrícula, comparando la ruta directa, la ruta con consultas y cada flujo alternativo.
+- **Rutas y derivaciones:** porcentaje de postulantes con ruta directa, fases de consulta más visitadas y derivaciones entre fases (origen → destino).
+- **Flujos alternativos:** por flujo, cantidad de postulantes derivados, desde qué fase del flujo principal y a qué fase de entrada, devoluciones al flujo principal y cierres manuales (por responsable y día, con su detalle), para controlar los casos resueltos fuera de MNP.
 - Matriculados y pendientes por carrera de primera preferencia.
 - Inicios de proceso por vía (QR o staff) y por día.
-- Tiempo promedio por fase y tiempo total del proceso.
-- Productividad por responsable: cantidad de cambios de estado e inicios de proceso por usuario y periodo.
+- Productividad por responsable: atenciones, derivaciones e inicios de proceso por usuario y periodo.
 - Postulantes cargados que aún no inician el proceso.
 - Al cierre: cantidad de expedientes Matriculados y en "Proceso pendiente", con la fase en que quedó detenido cada uno.
 - Fecha programada de eliminación de los datos del proceso (RF-26).
@@ -315,26 +458,30 @@ Un postulante puede tener **un solo expediente por proceso**.
 **RF-20 — Vista de seguimiento del postulante (enlace único).** Se accede mediante una URL personal con un token aleatorio de al menos 128 bits, no adivinable (ej.: `/seguimiento/{token}`). Es la misma URL que llega por correo y a la que redirige el QR. La vista muestra:
 - El número de atención, en tamaño destacado, y el primer nombre del postulante. No muestra el RUT ni otros datos personales.
 - Las carreras de interés.
-- El workflow completo en orden, con cada fase marcada como completada o por completar, y la fase actual destacada. No muestra las observaciones internas ni los nombres de los responsables.
+- Su recorrido, con:
+  - Las fases ya completadas, marcadas con ✓.
+  - La **fase actual**, destacada, con una instrucción clara: *"Dirígete a: Becas"* si está `EN_ESPERA`, o *"Estás siendo atendido en: Becas"* si está `EN_ATENCION`.
+  - La **fase siguiente** y el resto de la ruta planificada.
+  - No se muestran las fases de consulta que no están en su ruta, ni las observaciones internas, ni los nombres de los responsables.
 - Un mensaje persistente (fijo en pantalla):
-  - 🔴 **"No matriculado aún"**, en rojo, si alguna fase está pendiente.
-  - 🟢 **"Matriculado"**, en verde, si todas las fases están completas.
+  - 🔴 **"No matriculado aún"**, en rojo, mientras no quede matriculado.
+  - 🟢 **"Matriculado"**, en verde, cuando completa MNP o la fase final de un flujo alternativo.
 
 Comportamiento:
-- La vista se actualiza automáticamente, por ejemplo cada 30 segundos, sin recargar a mano.
+- La vista se actualiza automáticamente **cada 10 segundos**, sin recargar a mano. La consulta es liviana (solo el estado del recorrido) para soportar el volumen de RNF-04.
 - El token expira cuando el proceso pasa a CERRADO. Desde entonces, la vista muestra *"Este proceso ha finalizado"*.
 
 **RF-21 — Correo al postulante.** Se envía al `correo_personal` del postulante.
 
 **Cuándo se envía:**
 - **Correo de inicio:** automáticamente al crear el expediente (RF-11), por cualquiera de las dos vías.
-- **Correo de matrícula completada:** automáticamente cuando el expediente pasa a **Matriculado** (RF-16), es decir, al completarse la última fase. Incluye el resumen final con todas las fases completadas y el enlace de seguimiento. Si después se revierte una fase y se vuelve a completar, el correo **no** se reenvía automáticamente; se puede reenviar a mano.
+- **Correo de matrícula completada:** automáticamente cuando el expediente pasa a **Matriculado** (RF-16), es decir, al completarse MNP o la fase final manual de un flujo alternativo (RF-29). Incluye el resumen final con las fases recorridas y el enlace de seguimiento. Si después se reabre la atención que lo dejó Matriculado y se vuelve a completar (RF-27), el correo **no** se reenvía automáticamente; se puede reenviar a mano.
 - **Reenvío manual:** desde la ficha del postulante, cualquier rol puede reenviarlo con el botón *"Reenviar enlace"*.
 - **Reenvío por QR:** cuando el postulante ya tiene expediente (RF-10, paso 4).
 
 **Contenido:**
 - Nombre del proceso y número de atención.
-- Resumen del workflow: la lista de fases en orden y su estado en ese momento.
+- Resumen del recorrido: las fases de su ruta y su estado en ese momento, destacando la fase a la que debe dirigirse.
 - Carreras de interés registradas.
 - El **enlace único de seguimiento** (RF-20), destacado como botón y también como texto.
 - Un aviso de que el enlace es personal y no debe compartirse.
@@ -342,7 +489,7 @@ Comportamiento:
 **Envío:**
 - Se reutiliza el servicio SMTP de firmaDocs (`app/services/email.py`), con plantilla HTML y versión en texto plano.
 - **Remitente:** la cuenta institucional **`matricula-noreply@unach.cl`**, exclusiva para estos envíos y configurada en `SMTP_FROM_EMAIL` del `.env`. El correo indica que no se debe responder e incluye un medio de contacto de la unidad de matrícula.
-- El correo se envía **después** de confirmar la transacción del expediente o del cambio de estado. Si el envío falla, el expediente se crea igual.
+- El correo se envía **después** de confirmar la transacción del expediente o de la atención que lo deja Matriculado. Si el envío falla, el expediente se crea igual.
 - Cada envío queda registrado con su estado (`ENVIADO` o `ERROR`) y el detalle del error. La ficha del postulante y la reportería muestran los envíos fallidos para reintentarlos.
 - Si el postulante no recibe el correo y su dirección estaba mal, un Administrador o Gestor corrige el correo y reenvía el enlace.
 
@@ -370,7 +517,7 @@ Los usuarios no se eliminan, solo se desactivan, para conservar la auditoría.
 - Inicio de sesión (exitoso y fallido), cierre de sesión y cambio de contraseña.
 - Carga manual, cargas masivas (archivo, totales y usuario) y edición de postulantes.
 - Inicios de proceso, indicando la vía (staff o QR).
-- Cambios de estado y reversiones.
+- Inicio y fin de cada atención, con sus marcas de tiempo, derivaciones, cambios de ruta, reaperturas, abandonos y reactivaciones.
 - Envíos y reenvíos de correo.
 - Cambios de configuración de procesos, fases, responsables y enmascaramiento.
 - Gestión de usuarios y cambios de permisos.
@@ -387,7 +534,7 @@ Características:
 
 Quién la consulta:
 - **Administrador:** toda la auditoría.
-- **Gestor:** solo lectura, y solo los registros de expedientes y postulantes: inicios de proceso, cambios de estado, reversiones, cargas, ediciones de datos y correos. No ve los registros de configuración, usuarios, permisos ni sesiones.
+- **Gestor:** solo lectura, y solo los registros de expedientes y postulantes: inicios de proceso, atenciones, derivaciones, correcciones de ruta, cargas, ediciones de datos y correos. No ve los registros de configuración, usuarios, permisos ni sesiones.
 
 ### 5.10 Catálogo de carreras
 
@@ -422,12 +569,12 @@ Quién la consulta:
 |---|---|
 | RNF-01 | **Seguridad:** HTTPS obligatorio (Caddy), contraseñas con bcrypt, protección CSRF en todos los formularios (Flask-WTF) y control de acceso validado en el servidor, no solo en la interfaz. Los tokens de seguimiento se generan con `secrets.token_urlsafe`. |
 | RNF-02 | **Protección de datos:** cumplimiento de la Ley 19.628 y de la Ley 21.719 de protección de datos personales. Se recolectan solo los datos mínimos y se informa la finalidad en el formulario QR y en el correo. El formulario QR enmascara los datos existentes por defecto. La vista de seguimiento no expone RUT, teléfono ni correo. Los archivos de carga masiva no se conservan tras procesarse; se guardan solo el resumen y la auditoría. Los datos personales se conservan solo durante el período lectivo (enero a noviembre, aproximadamente) y luego se eliminan o anonimizan (RF-26). |
-| RNF-03 | **Usabilidad:** interfaz en español. El formulario QR, la vista de seguimiento y el correo son *mobile-first*. El inicio de proceso por staff, con un RUT precargado, se completa en menos de 1 minuto. El cambio de estado se hace en 3 clics o menos. |
-| RNF-04 | **Rendimiento y volumen:** volumen de referencia en el peak de matrícula: **2.500 postulantes por proceso y 40 usuarios del staff concurrentes**, más el tráfico del QR y de las vistas de seguimiento. Se dimensiona con un margen de 2× (5.000 postulantes y 80 usuarios). La búsqueda por RUT, el inicio de proceso y el cambio de estado responden en menos de 1 s. Una carga masiva de 20.000 filas se procesa en menos de 60 s. El envío de correo no bloquea la respuesta al usuario más de 3 s. |
+| RNF-03 | **Usabilidad:** interfaz en español. El formulario QR, la vista de seguimiento y el correo son *mobile-first*. El inicio de proceso por staff, con un RUT precargado, se completa en menos de 1 minuto. *"Atender"* se hace en 1 clic, y *"Finalizar y derivar"* en 3 clics o menos cuando se mantiene la ruta propuesta. |
+| RNF-04 | **Rendimiento y volumen:** volumen de referencia en el peak de matrícula: **2.500 postulantes por proceso y 40 usuarios del staff concurrentes**, más el tráfico del QR y de las vistas de seguimiento. Se dimensiona con un margen de 2× (5.000 postulantes y 80 usuarios). La búsqueda por RUT, el inicio de proceso, la atención y la derivación responden en menos de 1 s. Una derivación se refleja en el móvil del postulante y en la bandeja de destino en 10 s o menos. El polling cada 10 s de las vistas de seguimiento y de las bandejas, con todos los postulantes del peak conectados a la vez, debe responder en menos de 300 ms por consulta. Una carga masiva de 20.000 filas se procesa en menos de 60 s. El envío de correo no bloquea la respuesta al usuario más de 3 s. |
 | RNF-05 | **Disponibilidad:** alta disponibilidad durante el periodo de matrícula y respaldo diario de la base de datos. |
-| RNF-06 | **Concurrencia:** si dos usuarios modifican la misma fase al mismo tiempo, se usa bloqueo optimista (campo `version`) y el segundo recibe un aviso. Como las reglas de orden y reversión involucran varias fases, cada cambio de estado bloquea además la fila del expediente (`SELECT … FOR UPDATE`) durante la transacción. Dos inicios simultáneos del mismo RUT (por ejemplo, QR y staff a la vez) producen un solo expediente, gracias a la restricción `UNIQUE(proceso_id, postulante_id)`. La validación del orden (RF-14) y la del bloqueo de estructura (RF-05) se hacen dentro de la misma transacción. |
+| RNF-06 | **Concurrencia:** si dos usuarios modifican la misma fase al mismo tiempo, se usa bloqueo optimista (campo `version`) y el segundo recibe un aviso. Como las reglas de ruta y derivación involucran varias atenciones, cada atención, derivación o corrección bloquea además la fila del expediente (`SELECT … FOR UPDATE`) durante la transacción. Así se garantiza que haya como máximo una atención activa por expediente. Dos inicios simultáneos del mismo RUT (por ejemplo, QR y staff a la vez) producen un solo expediente, gracias a la restricción `UNIQUE(proceso_id, postulante_id)`. La validación de la ruta (RF-14) y la del bloqueo de estructura (RF-05) se hacen dentro de la misma transacción. |
 | RNF-07 | **Accesibilidad:** el estado no se comunica solo con color: los mensajes rojo y verde incluyen texto e ícono (WCAG 2.1 AA). |
-| RNF-08 | **Calidad:** desarrollo guiado por pruebas (TDD) con pytest. Las reglas de negocio (permisos, orden secuencial, bloqueo de estructura, estado global, enmascaramiento y validación de la carga) tienen cobertura de pruebas. |
+| RNF-08 | **Calidad:** desarrollo guiado por pruebas (TDD) con pytest. Las reglas de negocio (permisos, ruta y derivación, estados de atención, bloqueo de estructura, estado global, enmascaramiento y validación de la carga) tienen cobertura de pruebas. |
 
 ## 7. Stack tecnológico (igual a firmaDocs)
 
@@ -464,7 +611,7 @@ Se reutiliza el stack y las convenciones del proyecto `firmaDocs`. Como su repos
 - `admin`: usuarios, procesos, fases, responsables y catálogo de carreras.
 - `carga`: carga manual y masiva.
 - `inicio`: inicio de proceso por staff.
-- `expedientes`: búsqueda, ficha, cambio de estado y reenvío de correo.
+- `expedientes`: búsqueda, ficha, atención, derivación, correcciones de ruta y reenvío de correo.
 - `bandeja`, `reportes` y `auditoria`.
 - `publico`: formulario QR y vista de seguimiento.
 
@@ -472,7 +619,7 @@ Se reutiliza el stack y las convenciones del proyecto `firmaDocs`. Como su repos
 - `rut.py`: validación y normalización.
 - `postulantes.py`: validación de datos (RF-06) y enmascaramiento, compartidos por la carga y el inicio.
 - `inicio.py`: creación del expediente, común a las vías QR y staff.
-- `workflow.py`: reglas de habilitación, bloqueo de estructura, cambio de estado y estado global.
+- `workflow.py`: reglas de ruta, derivación, flujos alternativos, estados de atención, bloqueo de estructura y estado global.
 - `importacion.py`: lectura y carga masiva.
 - `email.py`: correo de inicio, correo de matrícula completada y reenvíos.
 - `retencion.py`: cálculo de plazos, eliminación de datos y anonimización (RF-26).
@@ -489,8 +636,14 @@ proceso (id, codigo UNIQUE, nombre, descripcion, fecha_inicio, fecha_fin, prefij
          ultimo_numero_atencion DEFAULT 0,                    -- contador; se bloquea al asignar (RF-19)
          fecha_cierre NULL, fecha_eliminacion DEFAULT 30-11 del año de fecha_inicio, datos_eliminados_en NULL)
          -- "iniciado" se deriva: EXISTS(expediente WHERE proceso_id = id)
-fase (id, proceso_id, identificador, nombre, descripcion, orden, es_sistema)
+fase (id, proceso_id, identificador, nombre, descripcion, tipo[INICIAL|CONSULTA|CIERRE_DIGITAL], orden,
+      mostrar_en_qr DEFAULT true)                  -- solo CONSULTA (RF-10)
+      -- orden: solo de presentación (RF-02); una INICIAL y una CIERRE_DIGITAL (MNP) por proceso
       UNIQUE(proceso_id, identificador), UNIQUE(proceso_id, orden)
+flujo_alternativo (id, proceso_id, codigo, nombre, descripcion, activo)     -- RF-29
+      UNIQUE(proceso_id, codigo)
+flujo_alternativo_fase (flujo_alternativo_id, posicion, fase_id)          -- la última posición es la fase final manual
+      PK(flujo_alternativo_id, posicion), UNIQUE(flujo_alternativo_id, fase_id)  -- solo fases CONSULTA
 fase_responsable (fase_id, usuario_id)                       -- N:M; incluye la fase "Iniciado"
 carrera (id, codigo UNIQUE, nombre, activo)
 postulante (id, rut UNIQUE, nombres, apellidos, telefono, correo_personal,
@@ -502,15 +655,26 @@ carga_masiva (id, usuario_id, nombre_archivo, politica_existentes[NO_MODIFICAR|C
               total_filas, creados, actualizados, omitidos, con_error, creado_en)
 expediente (id, proceso_id, postulante_id, via_inicio[STAFF|QR], iniciado_por NULL,
             numero_atencion, token_seguimiento UNIQUE, creado_en, cerrado_en,
-            estado_final[MATRICULADO|PROCESO_PENDIENTE] NULL)            -- se fija al cerrar el proceso
+            estado[EN_CURSO|ABANDONO|MATRICULADO|PROCESO_PENDIENTE] DEFAULT EN_CURSO,
+            con_observaciones DEFAULT false, matriculado_en NULL,
+            flujo_alternativo_id NULL,                                       -- flujo en curso; NULL = principal (RF-29)
+            tipo_cierre[DIGITAL|MANUAL] NULL, fase_cierre_id NULL,          -- al quedar MATRICULADO (RF-16, RF-29)
+            fase_detenida_id NULL)                                       -- fase actual al cerrar, si quedó pendiente
             UNIQUE(proceso_id, postulante_id), UNIQUE(proceso_id, numero_atencion)
-expediente_fase (id, expediente_id, fase_id, estado[PENDIENTE|COMPLETADO|COMPLETADO_CON_OBSERVACIONES],
-                 observacion, actualizado_por NULL, actualizado_en, version)
-                 UNIQUE(expediente_id, fase_id)
+atencion (id, expediente_id, fase_id, secuencia,
+          estado[PLANIFICADA|EN_ESPERA|EN_ATENCION|COMPLETADO|COMPLETADO_CON_OBSERVACIONES|DERIVADA|ABANDONADA],
+          observacion NULL, planificada_por NULL, derivada_desde_id NULL,   -- atención de origen de la derivación
+          en_espera_desde NULL, inicio_atencion NULL, fin_atencion NULL,
+          atendido_por NULL, sin_tiempo_atencion DEFAULT false,
+          flujo_alternativo_id NULL, detalle_cierre NULL,                  -- atención de un flujo alternativo (RF-29)
+          version)
+          UNIQUE(expediente_id, secuencia)
+          UNIQUE(expediente_id) WHERE estado IN ('EN_ESPERA','EN_ATENCION')  -- una sola atención activa
+          -- la ruta del expediente son sus atenciones ordenadas por secuencia (RF-12)
 envio_correo (id, expediente_id, tipo[INICIO|MATRICULADO|REENVIO|REENVIO_QR], destinatario, estado[ENVIADO|ERROR],
               detalle_error NULL, enviado_por NULL, creado_en)
 proceso_resumen (id, proceso_id, dimension[TOTAL|CARRERA|FASE], carrera_id NULL, fase_id NULL,
-                 matriculados, proceso_pendiente, calculado_en)
+                 matriculados, matriculados_cierre_manual, proceso_pendiente, calculado_en)
             -- totales agregados sin datos personales; sobreviven a la eliminación (RF-26)
             -- TOTAL: ambos NULL · CARRERA: carrera_id (1ª preferencia) · FASE: fase_id (fase en que quedó detenido)
 auditoria (id, fecha_hora, usuario_id NULL, actor[USUARIO|PUBLICO|SISTEMA], accion, entidad, entidad_id,
@@ -522,11 +686,12 @@ auditoria (id, fecha_hora, usuario_id NULL, actor[USUARIO|PUBLICO|SISTEMA], acci
 ### 9.1 Configuración
 
 1. El Administrador carga o actualiza el catálogo de carreras.
-2. Crea el proceso en estado BORRADOR, define sus fases y orden, y asigna responsables, incluidos los de "Iniciado".
-3. Define si el QR enmascara los datos (por defecto, sí).
-4. Cierra el proceso anterior, si sigue activo, y activa el nuevo.
-5. Mientras no tenga expedientes, aún puede ajustar las fases. Desde el primer expediente, la estructura queda bloqueada.
-6. Al terminar el periodo de matrícula, cierra el proceso. Los expedientes incompletos quedan como "Proceso pendiente" y los datos se eliminan en la `fecha_eliminacion` (por defecto, el 30 de noviembre).
+2. Crea el proceso en estado BORRADOR. El sistema crea las fases de sistema: la inicial ("Iniciado") y la de cierre digital (MNP).
+3. Define las fases de consulta (ej.: Becas, Beneficios, Finanzas) y asigna responsables a todas las fases, incluidas la inicial y MNP. Define los flujos alternativos (ej.: "Pago en efectivo": Finanzas → Caja → Firma de contrato), cuya última fase es la fase final manual, e indica qué fases de consulta se ofrecen en el QR.
+4. Define si el QR enmascara los datos (por defecto, sí).
+5. Cierra el proceso anterior, si sigue activo, y activa el nuevo.
+6. Mientras no tenga expedientes, aún puede agregar o eliminar fases. Desde el primer expediente, la estructura queda bloqueada.
+7. Al terminar el periodo de matrícula, cierra el proceso. Los expedientes que no quedaron Matriculados quedan como "Proceso pendiente" y los datos se eliminan en la `fecha_eliminacion` (por defecto, el 30 de noviembre).
 
 ### 9.2 Carga de datos (no inicia procesos)
 
@@ -538,36 +703,75 @@ auditoria (id, fecha_hora, usuario_id NULL, actor[USUARIO|PUBLICO|SISTEMA], acci
 
 1. El postulante llega y un responsable de "Iniciado" ingresa su RUT.
 2. Si el RUT existe, ve sus datos completos, completa los pendientes y corrige lo que haya cambiado. Si no existe, ingresa todos los datos.
-3. Al confirmar, se crea el expediente, la fase "Iniciado" queda `COMPLETADO` y se entrega el número de atención.
-4. El postulante recibe el correo con el resumen y su enlace de seguimiento.
+3. Le pregunta si tiene dudas y define la ruta: directa a MNP, o con las fases de consulta que correspondan.
+4. Al confirmar, se crea el expediente y se entrega el número de atención, indicando la fase a la que debe dirigirse.
+5. El postulante recibe el correo con el resumen y su enlace de seguimiento.
 
 ### 9.4 Inicio de proceso por QR
 
 1. El postulante escanea el QR e ingresa su RUT.
 2. Si el RUT existe, ve sus datos (enmascarados, si así está configurado) y completa solo los pendientes. Si no existe, completa todo el formulario.
 3. Al enviar, se crea el expediente, el postulante es redirigido a su enlace de seguimiento con su número de atención y recibe el mismo enlace por correo.
-4. Si ya tenía expediente, se le reenvía el enlace a su correo registrado.
+4. En el mismo formulario indica si tiene dudas y sobre qué temas. Así queda una ruta propuesta.
+5. Queda en espera en la fase inicial, donde un responsable revisa con él sus dudas y confirma o ajusta la ruta.
+6. Si ya tenía expediente, se le reenvía el enlace a su correo registrado.
 
-### 9.5 Avance por las fases
+### 9.5 Recorrido por las fases
 
-1. El postulante avanza **en orden** por cada fase. Cada responsable lo ve en su bandeja cuando su fase pasa a ser la fase actual, y marca el estado.
-2. El postulante sigue su avance desde el enlace. La vista se actualiza sola.
-3. Cuando todas las fases están completas, el estado global pasa a **Matriculado** y el postulante recibe el correo de matrícula completada.
+1. **Principal 1 · Ruta directa:** el postulante no tiene dudas. Desde la fase inicial pasa a MNP, donde completa la matrícula en la plataforma web Matrícula No Presencial, asistido en un tótem. Al completarse MNP, queda **Matriculado**.
+2. **Principal 2 · Ruta con consultas:** el postulante tiene dudas. Desde la fase inicial pasa a la primera fase de consulta (ej.: Becas). Al aclarar sus dudas, el responsable lo deriva a otra fase de consulta o a MNP. Al completarse MNP, queda **Matriculado**.
+3. En cada fase, el postulante aparece en la bandeja de los responsables como "en espera". El responsable presiona *"Atender"* y, al terminar, *"Finalizar y derivar"*. Así quedan registrados los tiempos de espera y de atención.
+4. Si en MNP surge una dificultad o una duda, el responsable puede derivarlo a una fase de consulta. Luego vuelve a MNP.
+5. **Alternativo manual:** si en cualquier fase del flujo principal se ve que el caso no puede terminar en MNP (ej.: pago en efectivo y firma manual del contrato), el responsable lo deriva a un flujo alternativo, en la fase de entrada que corresponda. El postulante recorre la secuencia fija del flujo y, al completarse la fase final manual con el detalle del cierre, queda **Matriculado** sin pasar por MNP. Si el caso cambia, se le puede devolver al flujo principal.
+6. El postulante sigue su recorrido desde el enlace: ve las fases completadas, la actual y la siguiente. La vista se actualiza sola.
+7. Al quedar Matriculado, recibe el correo de matrícula completada.
 
 ### 9.6 Diagramas
 
-Los diagramas están en formato [Mermaid](https://mermaid.js.org). Se ven directamente en GitHub, GitLab y VS Code (con la extensión *Markdown Preview Mermaid Support*), o pegándolos en [mermaid.live](https://mermaid.live). También hay una versión en imagen de cada diagrama en `docs/diagramas/`: `flujo-completo.png`, `estados-fase.png` y `estados-proceso.png`.
+Los diagramas están en formato [Mermaid](https://mermaid.js.org). Se ven directamente en GitHub, GitLab y VS Code (con la extensión *Markdown Preview Mermaid Support*), o pegándolos en [mermaid.live](https://mermaid.live). En `docs/diagramas/` está el fuente (`.mmd`) y la imagen (`.png`) de cada uno: `flujos`, `configuracion-inicio`, `recorrido`, `estados-atencion` y `estados-proceso`.
 
-#### 9.6.1 Flujo de trabajo completo
+#### 9.6.1 Flujos del proceso
+
+Vista simplificada de los tres tipos de recorrido (RF-12, RF-29). Se puede entrar a un flujo alternativo desde cualquier fase del flujo principal, en la fase de la secuencia que corresponda al caso.
+
+```mermaid
+flowchart TB
+    subgraph P1["Principal 1 · ruta directa"]
+        direction LR
+        A1["Iniciado"] --> A2["MNP"] --> A3(["🟢 Matriculado<br/>cierre digital"])
+    end
+
+    subgraph P2["Principal 2 · ruta con consultas"]
+        direction LR
+        B1["Iniciado"] --> B2["Fase a"] --> B3["…"] --> B4["Fase n"] --> B5["MNP"] --> B6(["🟢 Matriculado<br/>cierre digital"])
+    end
+
+    subgraph AL["Alternativo manual · secuencia fija"]
+        direction LR
+        C1["Fase a"] --> C2["Fase b"] --> C3["…"] --> C4["Fase final<br/>manual"] --> C5(["🟢 Matriculado<br/>cierre manual"])
+    end
+
+    P1 ~~~ P2 ~~~ AL
+
+    classDef fin fill:#d4edda,stroke:#28a745,color:#155724
+    classDef mnp fill:#e7f1ff,stroke:#0d6efd,color:#084298
+    classDef man fill:#f3e8ff,stroke:#7e3af2,color:#4c1d95
+    class A3,B6,C5 fin
+    class A2,B5 mnp
+    class C4 man
+```
+
+#### 9.6.2 Configuración, carga de datos e inicio de proceso
 
 ```mermaid
 flowchart TD
     %% ── 1. Configuración ──
     subgraph CONF["1 · Configuración — Administrador"]
-        A1["Cargar catálogo de carreras"] --> A2["Crear proceso en BORRADOR"]
-        A2 --> A3["Definir fases y su orden<br/>(Iniciado = fase 1)"]
-        A3 --> A4["Asignar responsables<br/>a cada fase"]
-        A4 --> A5{"¿Todas las fases tienen<br/>responsable y no hay<br/>otro proceso ACTIVO?"}
+        A1["Cargar catálogo de carreras"] --> A2["Crear proceso en BORRADOR<br/>(el sistema crea Iniciado y MNP)"]
+        A2 --> A3["Definir fases de consulta<br/>(ej.: Becas, Beneficios, Finanzas)<br/>y si se ofrecen en el QR"]
+        A3 --> A3b["Definir flujos alternativos<br/>(secuencia fija; la última fase<br/>es la fase final manual)"]
+        A3b --> A4["Asignar responsables<br/>a cada fase"]
+        A4 --> A5{"¿Una fase inicial y una MNP,<br/>todas las fases con responsable,<br/>flujos alternativos con fases<br/>y ningún otro proceso ACTIVO?"}
         A5 -- No --> A3
         A5 -- Sí --> A6(["Proceso ACTIVO"])
     end
@@ -594,6 +798,8 @@ flowchart TD
         Q2 -- No --> Q4{"¿RUT existe?"}
         Q4 -- Sí --> Q5["Muestra datos enmascarados<br/>(configurable) y completa<br/>solo los pendientes"]
         Q4 -- No --> Q6["Completa el<br/>formulario completo"]
+        Q5 --> Q7["Marca sus dudas<br/>= ruta propuesta"]
+        Q6 --> Q7
 
         C0 -- "Staff" --> S1["Responsable de Iniciado<br/>ingresa el RUT"]
         S1 --> S2{"¿Ya tiene<br/>expediente?"}
@@ -601,76 +807,165 @@ flowchart TD
         S2 -- No --> S4{"¿RUT existe?"}
         S4 -- Sí --> S5["Muestra datos completos;<br/>completa pendientes y<br/>corrige (excepto RUT)"]
         S4 -- No --> S6["Ingresa todos<br/>los datos"]
+        S5 --> S7["¿Tiene dudas? Define la ruta:<br/>directa, con consultas<br/>o flujo alternativo"]
+        S6 --> S7
 
-        Q5 --> E1
-        Q6 --> E1
-        S5 --> E1
-        S6 --> E1
-        E1["CREAR EXPEDIENTE (1 transacción)<br/>• todas las fases PENDIENTE<br/>• Iniciado = COMPLETADO<br/>• número de atención<br/>• token del enlace"]
+        Q7 --> E1
+        S7 --> E1
+        E1["CREAR EXPEDIENTE (1 transacción)<br/>• Staff: Iniciado COMPLETADO y<br/>primera fase de la ruta EN_ESPERA<br/>• QR: Iniciado EN_ESPERA<br/>con la ruta propuesta<br/>• número de atención · token del enlace"]
         E1 --> E2["Correo de inicio:<br/>resumen + enlace único"]
-        E1 --> E3["QR: redirige a la vista de seguimiento<br/>Staff: entrega el número de atención"]
+        E1 --> E3["QR: redirige a la vista de seguimiento<br/>Staff: entrega el número de atención<br/>y la fase a la que debe dirigirse"]
     end
 
-    %% ── 4. Avance por las fases ──
-    subgraph AVANCE["4 · Avance por las fases — orden obligatorio"]
-        F1["Fase actual =<br/>primera fase PENDIENTE"] --> F2["Aparece en la bandeja<br/>de sus responsables"]
-        F2 --> F3{"El responsable<br/>marca la fase"}
-        F3 -- "Sin marcar" --> F4["Sigue PENDIENTE"]
-        F4 --> F2
-        F3 -- "COMPLETADO" --> F5
-        F3 -- "COMPLETADO CON<br/>OBSERVACIONES<br/>(texto obligatorio)" --> F5
-        F5{"¿Quedan fases<br/>PENDIENTE?"}
-        F5 -- Sí --> F1
-        F5 -- No --> M1(["🟢 MATRICULADO"])
-        M1 --> M2["Correo de<br/>matrícula completada"]
-        F2 -. "el proceso se cierra<br/>con fases PENDIENTE" .-> PP(["🟠 PROCESO PENDIENTE"])
-    end
-
-    E2 --> F1
-    E3 --> F1
-
-    %% ── 5. Seguimiento del postulante ──
-    G1["📱 Vista de seguimiento (enlace único)<br/>número de atención + fases<br/>🔴 No matriculado aún / 🟢 Matriculado<br/>se actualiza cada 30 s"]
-    E2 -.-> G1
-    E3 -.-> G1
-    F1 -.-> G1
-    M1 -.-> G1
+    E2 --> R(["Recorrido por las fases<br/>(§9.6.3)"])
+    E3 --> R
 
     %% ── Estilos ──
     classDef fin fill:#d4edda,stroke:#28a745,color:#155724
     classDef datos fill:#e7f1ff,stroke:#0d6efd,color:#084298
     classDef clave fill:#fff3cd,stroke:#d39e00,color:#664d03
     classDef alerta fill:#f8d7da,stroke:#dc3545,color:#842029
-    class M1,A6 fin
-    class P1,PP alerta
-    class B3 datos
-    class E1 clave
+    class A6 fin
+    class P1 alerta
+    class B3,Q7,R datos
+    class E1,S7 clave
 ```
 
-> Todas las acciones del diagrama quedan registradas en la auditoría (RF-24). Las acciones del QR se registran con el actor `PUBLICO`, y los correos automáticos con el actor `SISTEMA`.
+> Todas las acciones de los diagramas quedan registradas en la auditoría (RF-24). Las acciones del QR se registran con el actor `PUBLICO`, y los correos automáticos con el actor `SISTEMA`.
 
-#### 9.6.2 Estados de una fase dentro de un expediente
+#### 9.6.3 Recorrido del postulante por las fases
+
+```mermaid
+flowchart TD
+    %% ── Inicio ──
+    P0{"¿Existe un proceso<br/>ACTIVO?"}
+    P0 -- No --> P1["⛔ No se permite iniciar<br/>(ni QR ni staff)"]
+    P0 -- Sí --> V{"¿Por qué vía<br/>llega?"}
+
+    V -- "QR" --> Q1["Postulante completa<br/>el formulario QR"]
+    Q1 --> Q2["Marca sus dudas<br/>(becas, beneficios, pago…)<br/>= ruta propuesta"]
+    Q2 --> Q3["Expediente creado<br/>📱 Dirígete a: Iniciado"]
+    Q3 --> I0
+
+    V -- "Staff" --> I0
+
+    subgraph INI["Fase INICIAL · Iniciado"]
+        I0["Responsable de Iniciado<br/>registra o revisa los datos"]
+        I0 --> D{"¿El postulante<br/>tiene dudas?<br/>(QR: confirma o ajusta<br/>la ruta propuesta)"}
+    end
+
+    D -- "No" --> RA["Principal 1 · ruta directa<br/>Iniciado → MNP"]
+    D -- "Sí" --> RB["Principal 2 · con consultas<br/>fases según dudas, en orden<br/>MNP al final"]
+
+    RA --> MNP_E
+    RB --> C_E
+
+    %% ── Fases de consulta (flujo principal) ──
+    subgraph CONS["Flujo principal · fases de CONSULTA · ej.: Becas, Beneficios, Finanzas"]
+        C_E["EN ESPERA<br/>📱 Dirígete a: «fase»<br/>🖥️ aparece en la bandeja"]
+        C_E -- "Atender" --> C_A["EN ATENCIÓN<br/>aclara sus dudas"]
+        C_A -- "Finalizar y derivar" --> C_D{"¿Siguiente fase?"}
+    end
+
+    C_D -- "otra fase de consulta" --> C_E
+    C_D -- "MNP" --> MNP_E
+
+    %% ── MNP: cierre digital ──
+    subgraph FIN["Flujo principal · MNP · cierre digital · Matrícula No Presencial (web, en tótem asistido)"]
+        MNP_E["EN ESPERA<br/>📱 Dirígete a: MNP"]
+        MNP_E -- "Atender" --> MNP_A["EN ATENCIÓN<br/>matrícula en la plataforma<br/>MNP, asistido en tótem"]
+        MNP_A --> MNP_R{"¿Completó la<br/>matrícula?"}
+    end
+
+    MNP_R -- "No: el staff lo deriva<br/>a la fase apropiada<br/>(atención DERIVADA)" --> C_E
+    MNP_R -- "Sí: Completado /<br/>Completado con observaciones" --> M1(["🟢 MATRICULADO<br/>cierre DIGITAL (MNP)<br/>o MANUAL (flujo alternativo)"])
+    M1 --> M2["✉️ Correo de<br/>matrícula completada"]
+
+    %% ── Flujo alternativo manual ──
+    D -- "no puede terminar en MNP" --> X0
+    C_D -- "no puede terminar en MNP" --> X0
+    MNP_R -- "No puede terminar en MNP" --> X0
+    X0["↪️ Derivar a flujo alternativo<br/>elige el flujo (ej.: Pago en efectivo)<br/>y la fase de entrada<br/>MNP sale de la ruta"]
+
+    subgraph ALT["Flujo ALTERNATIVO manual · secuencia fija · ej.: Finanzas → Caja → Firma de contrato"]
+        X_E["EN ESPERA<br/>📱 Dirígete a: «fase»"]
+        X_E -- "Atender" --> X_A["EN ATENCIÓN"]
+        X_A --> X_F{"¿Es la fase final<br/>del flujo?"}
+        X_F -- "No: Finalizar<br/>pasa a la fase siguiente<br/>de la secuencia" --> X_E
+    end
+
+    X0 --> X_E
+    X_F -- "Sí: Cerrar matrícula manualmente<br/>(detalle obligatorio: pago en efectivo,<br/>contrato firmado…)" --> M1
+    X_A -. "el caso cambia: Devolver al<br/>flujo principal (con motivo)<br/>nueva ruta con MNP al final" .-> C_E
+
+    %% ── Abandono ──
+    C_E -- "se retira de la fila" --> AB(["⏸️ ABANDONÓ<br/>sale de la bandeja"])
+    MNP_E -- "se retira de la fila" --> AB
+    X_E -- "se retira de la fila" --> AB
+    AB -- "vuelve: reactivar<br/>(nueva atención EN ESPERA)" --> C_E
+    AB -. "el proceso se cierra" .-> PP(["🟠 PROCESO PENDIENTE"])
+    C_E -. "el proceso se cierra<br/>sin quedar matriculado" .-> PP
+
+    %% ── Visibilidad y tiempos ──
+    G1["📱 Móvil del postulante y 🖥️ pantalla de responsables:<br/>estado · fases completadas · fase actual · fase siguiente<br/>(se actualiza cada 10 s)"]
+    G1 ~~~ T1
+    T1["⏱️ Cada atención registra:<br/>llegada a la fila → inicio («Atender») → fin<br/>= tiempo de espera y tiempo de atención"]
+
+    classDef fin fill:#d4edda,stroke:#28a745,color:#155724
+    classDef alerta fill:#f8d7da,stroke:#dc3545,color:#842029
+    classDef clave fill:#fff3cd,stroke:#d39e00,color:#664d03
+    classDef info fill:#e7f1ff,stroke:#0d6efd,color:#084298
+    classDef pausa fill:#eeeeee,stroke:#6c757d,color:#343a40
+    classDef alt fill:#f3e8ff,stroke:#7e3af2,color:#4c1d95
+    class M1 fin
+    class P1,PP alerta
+    class D,C_D,MNP_R,X_F clave
+    class RA,RB,G1,T1,Q2 info
+    class AB pausa
+    class X0 alt
+    style ALT fill:#faf5ff,stroke:#7e3af2
+```
+
+#### 9.6.4 Estados de una atención
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDIENTE : se crea el expediente
-    PENDIENTE --> COMPLETADO : el responsable marca<br/>(solo si la fase está habilitada)
-    PENDIENTE --> COMPLETADO_CON_OBSERVACIONES : marca + texto de observación
-    COMPLETADO --> PENDIENTE : reversión con motivo<br/>(solo si las fases posteriores están PENDIENTE)
-    COMPLETADO_CON_OBSERVACIONES --> PENDIENTE : reversión con motivo
-    note right of PENDIENTE
-        La fase "Iniciado" nace COMPLETADO
-        y nunca se revierte.
+    [*] --> PLANIFICADA : se agrega a la ruta<br/>(inicio o derivación)
+    [*] --> EN_ESPERA : primera fase de la ruta
+    PLANIFICADA --> EN_ESPERA : se completa la atención anterior
+    PLANIFICADA --> [*] : se quita de la ruta<br/>(derivación, corrección o<br/>cambio de flujo)
+    EN_ESPERA --> EN_ATENCION : el responsable presiona «Atender»
+    EN_ATENCION --> COMPLETADO : «Finalizar y derivar»
+    EN_ATENCION --> COMPLETADO_CON_OBSERVACIONES : finaliza + texto de observación
+    EN_ESPERA --> DERIVADA : «Derivar ahora»
+    EN_ATENCION --> DERIVADA : «Derivar ahora»<br/>(en el flujo principal, la fase<br/>se replanifica después)
+    EN_ESPERA --> ABANDONADA : «Abandonó»<br/>(se retira de la fila)
+    ABANDONADA --> [*] : al reactivar se crea<br/>una nueva atención EN_ESPERA
+    COMPLETADO --> EN_ESPERA : reapertura (Gestor/Admin, con motivo)
+    COMPLETADO_CON_OBSERVACIONES --> EN_ESPERA : reapertura
+    note right of EN_ESPERA
+        Como máximo una atención
+        EN_ESPERA o EN_ATENCION
+        por expediente.
+    end note
+    note right of COMPLETADO
+        Completar MNP (cierre digital) o la
+        fase final de un flujo alternativo
+        (cierre manual, con detalle) deja al
+        expediente MATRICULADO. En un flujo
+        alternativo, al completarse una
+        atención pasa a EN_ESPERA la fase
+        siguiente de la secuencia fija.
     end note
 ```
 
-#### 9.6.3 Estados de un proceso
+#### 9.6.5 Estados de un proceso
 
 ```mermaid
 stateDiagram-v2
     [*] --> BORRADOR : el Administrador crea el proceso
-    BORRADOR --> ACTIVO : activar<br/>(todas las fases con responsable,<br/>ningún otro proceso ACTIVO)
-    ACTIVO --> CERRADO : cerrar<br/>(expedientes en solo lectura,<br/>incompletos = Proceso pendiente,<br/>enlaces expiran)
+    BORRADOR --> ACTIVO : activar<br/>(una fase inicial y una MNP,<br/>todas las fases con responsable,<br/>flujos alternativos con fases,<br/>ningún otro proceso ACTIVO)
+    ACTIVO --> CERRADO : cerrar<br/>(expedientes en solo lectura,<br/>no matriculados = Proceso pendiente,<br/>enlaces expiran)
     CERRADO --> DATOS_ELIMINADOS : fin del período lectivo<br/>(fecha_eliminacion, ~30 de noviembre)<br/>(datos personales eliminados,<br/>auditoría anonimizada)
     DATOS_ELIMINADOS --> [*]
     note left of BORRADOR
@@ -678,35 +973,38 @@ stateDiagram-v2
         iniciar ningún recorrido (QR ni staff).
     end note
     note right of ACTIVO
-        Las fases se pueden modificar hasta
-        que se crea el primer expediente.
-        Desde ahí, la estructura queda bloqueada.
+        Las fases y los flujos alternativos
+        se pueden modificar hasta que se crea
+        el primer expediente. Desde ahí,
+        la estructura queda bloqueada.
     end note
 ```
 
 ## 10. Pantallas
 
 1. Inicio de sesión / cambio de contraseña obligatorio
-2. **Iniciar proceso** (staff): ingreso de RUT, datos con campos pendientes editables y confirmación con número de atención
+2. **Iniciar proceso** (staff): ingreso de RUT, datos con campos pendientes editables, pregunta *"¿Tiene dudas?"* con selección de fases de consulta, y confirmación con número de atención y fase de destino
 3. Búsqueda por RUT / ficha del postulante con su expediente, historial de correos y botón "Reenviar enlace"
 4. **Carga manual** de postulante
 5. **Carga masiva**: descarga de plantilla, subida, vista previa y resumen (Administrador y Gestor)
 6. Edición de postulante (Administrador y Gestor)
-7. Bandeja de trabajo por fase
-8. Configuración de procesos y fases (Administrador). Indica si el proceso está iniciado y la estructura bloqueada, e incluye la opción de enmascarar datos del QR
+7. Bandeja de trabajo por fase: en espera (con tiempo de espera), en atención y próximos, con los botones *"Atender"* y *"Finalizar y derivar"*
+7b. **Finalizar y derivar**: resultado de la atención (completado o con observaciones) y ruta propuesta editable (agregar, quitar o reordenar fases de consulta), y la opción *"Derivar a flujo alternativo"* (flujo y fase de entrada). En un flujo alternativo, la fase siguiente es fija; en su fase final, *"Cerrar matrícula manualmente"* con su detalle obligatorio, y en cualquiera de sus fases, *"Devolver al flujo principal"*
+8. Configuración de procesos y fases (Administrador). Indica si el proceso está iniciado y la estructura bloqueada, e incluye la opción de enmascarar datos del QR y la opción `mostrar_en_qr` de las fases de consulta
+8b. **Flujos alternativos** (Administrador): nombre, descripción y secuencia de fases, con la fase final manual al final
 9. Asignación de responsables (Administrador)
 10. Gestión de usuarios y permiso de carga manual (Administrador)
 11. Reportería (Gestor y Administrador)
 12. Auditoría (Administrador completa; Gestor solo lectura y filtrada)
 13. Catálogo de carreras (Administrador)
 14. **Formulario QR** público (móvil), con modo enmascarado
-15. Vista de seguimiento del postulante (pública con token, móvil)
+15. Vista de seguimiento del postulante (pública con token, móvil): fases completadas, fase actual con instrucción *"Dirígete a…"* y fase siguiente
 16. Plantillas de correo de inicio y de matrícula completada (HTML y texto), y póster imprimible del QR "Inicia aquí"
 
 ## 11. Criterios de aceptación clave
 
 **Permisos**
-- [ ] Un usuario de fase no puede cambiar, ni desde la interfaz ni por API, el estado de una fase que no tiene asignada (respuesta 403).
+- [ ] Un usuario de fase no puede atender, finalizar ni derivar, ni desde la interfaz ni por API, en una fase que no tiene asignada (respuesta 403).
 - [ ] No se puede guardar un usuario de fase sin fases asignadas.
 - [ ] Un Usuario de fase que no es responsable de "Iniciado" no puede iniciar procesos, ni por la interfaz ni por API (respuesta 403).
 - [ ] Un Usuario de fase responsable de "Iniciado" puede iniciar el proceso de un RUT inexistente, aunque no tenga `puede_registrar_postulantes`.
@@ -728,14 +1026,42 @@ stateDiagram-v2
 - [ ] Si el RUT ya tiene expediente, el QR no crea otro, no muestra el enlace en pantalla y lo reenvía al correo registrado.
 - [ ] Dos inicios simultáneos del mismo RUT producen un único expediente.
 
-**Workflow**
-- [ ] Ningún rol puede marcar una fase si alguna fase anterior está `PENDIENTE` (respuesta 409 con el nombre de la fase bloqueante).
-- [ ] No se puede revertir a `PENDIENTE` una fase si alguna fase posterior está completa, ni revertir nunca la fase "Iniciado".
-- [ ] En un proceso con al menos un expediente, agregar, eliminar o reordenar fases es rechazado (respuesta 409), aunque se intente por API.
-- [ ] En un proceso sin expedientes, se pueden agregar, eliminar y reordenar fases.
-- [ ] Toda fase de un expediente nuevo nace como `PENDIENTE`, salvo "Iniciado".
+**Recorrido y derivación**
+- [ ] En el inicio por staff no se puede confirmar sin responder *"¿Tiene dudas?"*. Si la respuesta es "no", la ruta queda Iniciado → MNP.
+- [ ] Con la respuesta "sí", el responsable elige una o más fases de consulta. MNP queda al final de la ruta.
+- [ ] Un expediente iniciado por QR queda `EN_ESPERA` en la fase inicial y aparece en la bandeja de sus responsables, con las fases de consulta que marcó el postulante como ruta propuesta.
+- [ ] Al atender a un postulante que inició por QR, el responsable de "Iniciado" puede confirmar la ruta propuesta o cambiarla.
+- [ ] Al derivar a Becas, el postulante ve *"Dirígete a: Becas"* en su móvil y aparece en espera en la bandeja de los responsables de Becas, ambos en 10 s o menos.
+- [ ] El responsable de cualquier fase puede agregar, quitar o reordenar las fases de consulta pendientes de la ruta, pero no puede quitar MNP ni dejarla antes de otra fase.
+- [ ] Desde MNP se puede derivar a una fase de consulta. La atención de MNP queda `DERIVADA` y MNP se vuelve a planificar después de esa fase.
+- [ ] Nadie puede atender ni finalizar una atención que no sea la actual del expediente (respuesta 409), aunque se intente por API.
+- [ ] Un expediente nunca tiene más de una atención `EN_ESPERA` o `EN_ATENCION`, incluso con dos responsables actuando a la vez.
+- [ ] Cada atención registra `en_espera_desde`, `inicio_atencion` y `fin_atencion`, y los tiempos de espera y de atención aparecen en los reportes.
 - [ ] `COMPLETADO_CON_OBSERVACIONES` sin texto de observación es rechazado.
-- [ ] El estado global es "Matriculado" solo si todas las fases están `COMPLETADO` o `COMPLETADO_CON_OBSERVACIONES`.
+- [ ] El estado global es "Matriculado" si y solo si se completó la atención de MNP o la de la fase final de un flujo alternativo.
+- [ ] Un expediente matriculado con alguna atención `COMPLETADO_CON_OBSERVACIONES` aparece como "Matriculado con observaciones" en los reportes, y el postulante ve "Matriculado".
+- [ ] El responsable de la fase actual puede marcar como "Abandonó" a un postulante `EN_ESPERA`. El postulante sale de la bandeja y del reporte de espera, y su vista de seguimiento muestra que la atención quedó en pausa.
+- [ ] Un postulante en "Abandonó" se puede reactivar desde su ficha. Vuelve a quedar `EN_ESPERA` y conserva el resto de su ruta.
+- [ ] Al cerrar el proceso, un expediente en "Abandonó" queda como "Proceso pendiente" y en los reportes se indica que hubo abandono.
+- [ ] El Gestor puede reabrir la última atención completada solo si la atención siguiente aún no comenzó, con motivo y auditoría. La atención de "Iniciado" no se puede reabrir.
+- [ ] En un proceso con al menos un expediente, agregar o eliminar fases, o cambiar su tipo, es rechazado (respuesta 409), aunque se intente por API.
+- [ ] En un proceso sin expedientes, se pueden agregar, eliminar y reordenar fases.
+- [ ] No se puede activar un proceso sin exactamente una fase inicial y una fase MNP.
+
+**Flujos alternativos**
+- [ ] Un proceso puede tener varios flujos alternativos, cada uno con su secuencia de fases. Una fase de consulta puede estar en el flujo principal y en varios flujos alternativos.
+- [ ] En un proceso con al menos un expediente, crear o eliminar flujos alternativos, o cambiar sus fases o su orden, es rechazado (respuesta 409), aunque se intente por API.
+- [ ] Desde Iniciado, desde una fase de consulta y desde MNP se puede derivar a un flujo alternativo, eligiendo la fase de entrada. MNP y las demás atenciones planificadas del flujo principal salen de la ruta.
+- [ ] Dentro de un flujo alternativo, al finalizar una atención el postulante pasa automáticamente a la fase siguiente. Agregar, quitar o reordenar fases, o derivar a otra fase, es rechazado (respuesta 409).
+- [ ] Al devolver al postulante al flujo principal, con motivo, las atenciones planificadas del flujo alternativo salen de la ruta y la nueva ruta termina en MNP.
+- [ ] La fase final de un flujo alternativo no se puede finalizar sin detalle del cierre.
+- [ ] Al completar la fase final manual, el expediente queda Matriculado con tipo de cierre `MANUAL` y el flujo alternativo, se envía el correo de matrícula y el postulante ve "Matriculado".
+- [ ] El formulario QR solo ofrece como temas de duda las fases de consulta con `mostrar_en_qr = sí`.
+
+**Reportería**
+- [ ] El reporte de estado distingue pendientes, matriculados y matriculados con observaciones, y los matriculados por cierre digital (MNP) y por cierre manual, por flujo alternativo.
+- [ ] El reporte de postulantes en espera muestra, por fase, el tiempo que lleva esperando cada uno.
+- [ ] El reporte de atención por fase muestra la cantidad de atenciones y los tiempos de espera y de atención (promedio, mediana y máximo), por fase y por responsable.
 
 **Datos y carga masiva**
 - [ ] Un RUT con dígito verificador inválido es rechazado en todas las vías.
@@ -751,15 +1077,15 @@ stateDiagram-v2
 
 **Correo y seguimiento**
 - [ ] Al crear un expediente, por cualquier vía, se envía un correo al `correo_personal` con el resumen y el enlace de seguimiento, y el envío queda registrado.
-- [ ] Al completarse la última fase, se envía una única vez el correo de matrícula completada.
+- [ ] Al quedar Matriculado, por cierre digital o manual, se envía una única vez el correo de matrícula completada.
 - [ ] Los correos salen desde la cuenta configurada en `SMTP_FROM_EMAIL` (no-reply).
 - [ ] Si el SMTP falla, el expediente se crea igual y el envío queda con estado `ERROR`, visible en la ficha.
 - [ ] El enlace del correo y el de la redirección del QR son el mismo para un mismo expediente.
 - [ ] La vista de seguimiento no muestra RUT, teléfono, correo, observaciones ni nombres de responsables.
-- [ ] La vista de seguimiento refleja un cambio de estado en 30 s o menos.
+- [ ] La vista de seguimiento muestra las fases completadas, la actual y la siguiente, y refleja una derivación en 10 s o menos.
 
 **Cierre y conservación de datos**
-- [ ] Al cerrar el proceso, los expedientes con alguna fase `PENDIENTE` quedan con estado "Proceso pendiente" y en solo lectura.
+- [ ] Al cerrar el proceso, los expedientes que no quedaron Matriculados quedan con estado "Proceso pendiente", con la fase en que quedaron detenidos, y en solo lectura.
 - [ ] Al crear un proceso, `fecha_eliminacion` toma por defecto el 30 de noviembre del año de `fecha_inicio`, y no se acepta una fecha anterior a `fecha_fin`.
 - [ ] Si llega la `fecha_eliminacion` y el proceso sigue ACTIVO, no se elimina nada y el Administrador recibe una alerta.
 - [ ] Al vencer el plazo, el comando de eliminación borra los expedientes y los datos personales del proceso, anonimiza la auditoría y conserva solo los totales agregados.
@@ -777,13 +1103,14 @@ stateDiagram-v2
 - Correo al postulante en cada cambio de fase.
 - Notificaciones por SMS o WhatsApp.
 - Pantalla de llamado de turnos (TV) con el número de atención.
+- Tiempos objetivo de espera y de atención por fase, con alertas en la bandeja y en los reportes.
 - Integración con el sistema académico o financiero para completar fases automáticamente (ej.: Finanzas, al confirmarse un pago).
 
 ## 13. Preguntas abiertas
 
 ### Resueltas
 
-- ~~Orden de fases~~ → **Secuencial obligatorio** (RF-14).
+- ~~Orden de fases~~ → ~~Secuencial obligatorio~~ → **Recorrido dinámico** desde la v0.8: ruta directa o con consultas, con derivación en cada fase (RF-12, RF-14).
 - ~~"Completado con observaciones" cuenta como completado~~ → **Sí** (RF-16).
 - ~~Campos de correo~~ → **Un solo campo, `correo_personal`, obligatorio**. Se usa para enviar el resumen y el enlace (RF-21).
 - ~~Autenticación~~ → **Usuarios propios; SSO Google más adelante** (RF-22).
@@ -810,9 +1137,32 @@ stateDiagram-v2
 - ~~Inicio sin proceso activo~~ → **Prohibido por cualquier vía** (§5.3).
 - ~~Conservación de datos~~ → **Solo durante el período lectivo, de enero a noviembre aproximadamente. Por defecto, se eliminan el 30 de noviembre** (RF-26).
 
+Resueltas en la v0.8 (recorrido dinámico):
+
+- ~~Inicio por QR y dudas~~ → **El formulario QR pregunta si hay dudas y sobre qué temas, y arma una ruta propuesta. El staff de "Iniciado" lo atiende igual y confirma o ajusta la ruta** (RF-10, RF-14).
+- ~~Ruta de varias fases~~ → **Sí: la fase inicial puede planificar varias fases de consulta en orden, y cada responsable puede modificarlas** (RF-12, RF-14).
+- ~~Integración con el tótem~~ → **Sin integración. El responsable de MNP registra el resultado** (RF-03).
+- ~~Sigla MNP~~ → **Matrícula No Presencial**, la plataforma web de matrícula que el postulante usa asistido en un tótem (RF-03).
+- ~~Resultado no exitoso en MNP~~ → **El staff de MNP deriva al postulante a la fase apropiada** (RF-14).
+- ~~Medición del tiempo de atención~~ → **Botón "Atender" al llamar al postulante y "Finalizar y derivar" al terminar** (RF-13).
+- ~~Abandono~~ → **Se marca como "Abandonó", sale de la fila y se puede reactivar si vuelve** (RF-28).
+- ~~Visitas repetidas~~ → **Se permiten. Cada visita es una atención distinta** (RF-12).
+- ~~Reapertura de atenciones~~ → **Solo el Gestor y el Administrador** (RF-27).
+- ~~Conclusión fuera de MNP~~ → **MNP no es la fase final para todos. Los casos que no pueden terminar en MNP siguen un flujo alternativo manual: secuencia completa y fija, cuya última fase es la fase final manual, con detalle del cierre obligatorio** (RF-03, RF-29).
+- ~~Entrada a un flujo alternativo~~ → **Desde cualquier fase del flujo principal, en la fase de entrada que corresponda al caso** (RF-29).
+- ~~Rigidez del flujo alternativo~~ → **Secuencia estricta, pero se puede devolver al flujo principal** (RF-29).
+- ~~Fase final del flujo alternativo~~ → **Siempre la última de la secuencia** (RF-29).
+- ~~Cantidad de flujos alternativos~~ → **Varios por proceso, cada uno con su nombre y sus fases** (RF-29).
+- ~~Fases compartidas~~ → **Una fase puede estar en el flujo principal y en flujos alternativos, con los mismos responsables y la misma bandeja** (RF-02, RF-29).
+- ~~Flujo alternativo desde el inicio~~ → **Sí: en el inicio por staff, el responsable de Iniciado puede elegir un flujo alternativo como ruta** (RF-29).
+- ~~Fases repetidas en un flujo alternativo~~ → **No: una fase no se repite dentro de un mismo flujo alternativo** (RF-29).
+- ~~Tiempos objetivo~~ → **No por ahora. Los tiempos solo se informan en los reportes** (§12).
+
 ### Pendientes
 
-No quedan preguntas funcionales abiertas. Los datos operativos pendientes se detallan en la §14.
+No quedan preguntas funcionales abiertas.
+
+Los datos operativos pendientes se detallan en la §14.
 
 ## 14. Configuración inicial
 

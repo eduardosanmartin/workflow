@@ -1,0 +1,89 @@
+%% Recorrido del postulante por las fases (SPEC §5.4, RF-12 a RF-16, RF-28, RF-29)
+flowchart TD
+    %% ── Inicio ──
+    P0{"¿Existe un proceso<br/>ACTIVO?"}
+    P0 -- No --> P1["⛔ No se permite iniciar<br/>(ni QR ni staff)"]
+    P0 -- Sí --> V{"¿Por qué vía<br/>llega?"}
+
+    V -- "QR" --> Q1["Postulante completa<br/>el formulario QR"]
+    Q1 --> Q2["Marca sus dudas<br/>(becas, beneficios, pago…)<br/>= ruta propuesta"]
+    Q2 --> Q3["Expediente creado<br/>📱 Dirígete a: Iniciado"]
+    Q3 --> I0
+
+    V -- "Staff" --> I0
+
+    subgraph INI["Fase INICIAL · Iniciado"]
+        I0["Responsable de Iniciado<br/>registra o revisa los datos"]
+        I0 --> D{"¿El postulante<br/>tiene dudas?<br/>(QR: confirma o ajusta<br/>la ruta propuesta)"}
+    end
+
+    D -- "No" --> RA["Principal 1 · ruta directa<br/>Iniciado → MNP"]
+    D -- "Sí" --> RB["Principal 2 · con consultas<br/>fases según dudas, en orden<br/>MNP al final"]
+
+    RA --> MNP_E
+    RB --> C_E
+
+    %% ── Fases de consulta (flujo principal) ──
+    subgraph CONS["Flujo principal · fases de CONSULTA · ej.: Becas, Beneficios, Finanzas"]
+        C_E["EN ESPERA<br/>📱 Dirígete a: «fase»<br/>🖥️ aparece en la bandeja"]
+        C_E -- "Atender" --> C_A["EN ATENCIÓN<br/>aclara sus dudas"]
+        C_A -- "Finalizar y derivar" --> C_D{"¿Siguiente fase?"}
+    end
+
+    C_D -- "otra fase de consulta" --> C_E
+    C_D -- "MNP" --> MNP_E
+
+    %% ── MNP: cierre digital ──
+    subgraph FIN["Flujo principal · MNP · cierre digital · Matrícula No Presencial (web, en tótem asistido)"]
+        MNP_E["EN ESPERA<br/>📱 Dirígete a: MNP"]
+        MNP_E -- "Atender" --> MNP_A["EN ATENCIÓN<br/>matrícula en la plataforma<br/>MNP, asistido en tótem"]
+        MNP_A --> MNP_R{"¿Completó la<br/>matrícula?"}
+    end
+
+    MNP_R -- "No: el staff lo deriva<br/>a la fase apropiada<br/>(atención DERIVADA)" --> C_E
+    MNP_R -- "Sí: Completado /<br/>Completado con observaciones" --> M1(["🟢 MATRICULADO<br/>cierre DIGITAL (MNP)<br/>o MANUAL (flujo alternativo)"])
+    M1 --> M2["✉️ Correo de<br/>matrícula completada"]
+
+    %% ── Flujo alternativo manual ──
+    D -- "no puede terminar en MNP" --> X0
+    C_D -- "no puede terminar en MNP" --> X0
+    MNP_R -- "No puede terminar en MNP" --> X0
+    X0["↪️ Derivar a flujo alternativo<br/>elige el flujo (ej.: Pago en efectivo)<br/>y la fase de entrada<br/>MNP sale de la ruta"]
+
+    subgraph ALT["Flujo ALTERNATIVO manual · secuencia fija · ej.: Finanzas → Caja → Firma de contrato"]
+        X_E["EN ESPERA<br/>📱 Dirígete a: «fase»"]
+        X_E -- "Atender" --> X_A["EN ATENCIÓN"]
+        X_A --> X_F{"¿Es la fase final<br/>del flujo?"}
+        X_F -- "No: Finalizar<br/>pasa a la fase siguiente<br/>de la secuencia" --> X_E
+    end
+
+    X0 --> X_E
+    X_F -- "Sí: Cerrar matrícula manualmente<br/>(detalle obligatorio: pago en efectivo,<br/>contrato firmado…)" --> M1
+    X_A -. "el caso cambia: Devolver al<br/>flujo principal (con motivo)<br/>nueva ruta con MNP al final" .-> C_E
+
+    %% ── Abandono ──
+    C_E -- "se retira de la fila" --> AB(["⏸️ ABANDONÓ<br/>sale de la bandeja"])
+    MNP_E -- "se retira de la fila" --> AB
+    X_E -- "se retira de la fila" --> AB
+    AB -- "vuelve: reactivar<br/>(nueva atención EN ESPERA)" --> C_E
+    AB -. "el proceso se cierra" .-> PP(["🟠 PROCESO PENDIENTE"])
+    C_E -. "el proceso se cierra<br/>sin quedar matriculado" .-> PP
+
+    %% ── Visibilidad y tiempos ──
+    G1["📱 Móvil del postulante y 🖥️ pantalla de responsables:<br/>estado · fases completadas · fase actual · fase siguiente<br/>(se actualiza cada 10 s)"]
+    G1 ~~~ T1
+    T1["⏱️ Cada atención registra:<br/>llegada a la fila → inicio («Atender») → fin<br/>= tiempo de espera y tiempo de atención"]
+
+    classDef fin fill:#d4edda,stroke:#28a745,color:#155724
+    classDef alerta fill:#f8d7da,stroke:#dc3545,color:#842029
+    classDef clave fill:#fff3cd,stroke:#d39e00,color:#664d03
+    classDef info fill:#e7f1ff,stroke:#0d6efd,color:#084298
+    classDef pausa fill:#eeeeee,stroke:#6c757d,color:#343a40
+    classDef alt fill:#f3e8ff,stroke:#7e3af2,color:#4c1d95
+    class M1 fin
+    class P1,PP alerta
+    class D,C_D,MNP_R,X_F clave
+    class RA,RB,G1,T1,Q2 info
+    class AB pausa
+    class X0 alt
+    style ALT fill:#faf5ff,stroke:#7e3af2

@@ -1,0 +1,17 @@
+%% Estados de un proceso (SPEC RF-01, RF-05, RF-26)
+stateDiagram-v2
+    [*] --> BORRADOR : el Administrador crea el proceso
+    BORRADOR --> ACTIVO : activar<br/>(una fase inicial y una MNP,<br/>todas las fases con responsable,<br/>flujos alternativos con fases,<br/>ningún otro proceso ACTIVO)
+    ACTIVO --> CERRADO : cerrar<br/>(expedientes en solo lectura,<br/>no matriculados = Proceso pendiente,<br/>enlaces expiran)
+    CERRADO --> DATOS_ELIMINADOS : fin del período lectivo<br/>(fecha_eliminacion, ~30 de noviembre)<br/>(datos personales eliminados,<br/>auditoría anonimizada)
+    DATOS_ELIMINADOS --> [*]
+    note left of BORRADOR
+        Sin un proceso ACTIVO no se puede
+        iniciar ningún recorrido (QR ni staff).
+    end note
+    note right of ACTIVO
+        Las fases y los flujos alternativos
+        se pueden modificar hasta que se crea
+        el primer expediente. Desde ahí,
+        la estructura queda bloqueada.
+    end note

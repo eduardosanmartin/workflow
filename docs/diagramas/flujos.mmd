@@ -1,0 +1,25 @@
+%% Flujos del proceso de matrícula (SPEC v0.8, RF-12, RF-29)
+flowchart TB
+    subgraph P1["Principal 1 · ruta directa"]
+        direction LR
+        A1["Iniciado"] --> A2["MNP"] --> A3(["🟢 Matriculado<br/>cierre digital"])
+    end
+
+    subgraph P2["Principal 2 · ruta con consultas"]
+        direction LR
+        B1["Iniciado"] --> B2["Fase a"] --> B3["…"] --> B4["Fase n"] --> B5["MNP"] --> B6(["🟢 Matriculado<br/>cierre digital"])
+    end
+
+    subgraph AL["Alternativo manual · secuencia fija"]
+        direction LR
+        C1["Fase a"] --> C2["Fase b"] --> C3["…"] --> C4["Fase final<br/>manual"] --> C5(["🟢 Matriculado<br/>cierre manual"])
+    end
+
+    P1 ~~~ P2 ~~~ AL
+
+    classDef fin fill:#d4edda,stroke:#28a745,color:#155724
+    classDef mnp fill:#e7f1ff,stroke:#0d6efd,color:#084298
+    classDef man fill:#f3e8ff,stroke:#7e3af2,color:#4c1d95
+    class A3,B6,C5 fin
+    class A2,B5 mnp
+    class C4 man

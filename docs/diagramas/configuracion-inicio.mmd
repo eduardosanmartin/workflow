@@ -1,0 +1,66 @@
+%% Configuración, carga de datos e inicio de proceso (SPEC §5.1 a §5.3)
+flowchart TD
+    %% ── 1. Configuración ──
+    subgraph CONF["1 · Configuración — Administrador"]
+        A1["Cargar catálogo de carreras"] --> A2["Crear proceso en BORRADOR<br/>(el sistema crea Iniciado y MNP)"]
+        A2 --> A3["Definir fases de consulta<br/>(ej.: Becas, Beneficios, Finanzas)<br/>y si se ofrecen en el QR"]
+        A3 --> A3b["Definir flujos alternativos<br/>(secuencia fija; la última fase<br/>es la fase final manual)"]
+        A3b --> A4["Asignar responsables<br/>a cada fase"]
+        A4 --> A5{"¿Una fase inicial y una MNP,<br/>todas las fases con responsable,<br/>flujos alternativos con fases<br/>y ningún otro proceso ACTIVO?"}
+        A5 -- No --> A3
+        A5 -- Sí --> A6(["Proceso ACTIVO"])
+    end
+
+    %% ── 2. Carga de datos ──
+    subgraph CARGA["2 · Carga de datos — NO inicia el proceso"]
+        B1["Carga masiva CSV/Excel<br/>Admin · Gestor"] --> B3[("Postulante registrado<br/>SIN expediente")]
+        B2["Carga manual<br/>Admin · Gestor ·<br/>Usuario de fase con permiso"] --> B3
+    end
+
+    A6 --> P0
+    B3 -. "datos precargados" .-> P0
+
+    %% ── 3. Inicio de proceso ──
+    subgraph INICIO["3 · Inicio de proceso — solo 2 vías"]
+        P0{"¿Existe un proceso<br/>ACTIVO?"}
+        P0 -- No --> P1["⛔ No se permite iniciar<br/>por ninguna vía"]
+        P0 -- Sí --> C0
+        C0{"¿Por qué vía<br/>llega el postulante?"}
+
+        C0 -- "QR" --> Q1["Postulante escanea el QR<br/>e ingresa su RUT"]
+        Q1 --> Q2{"¿Ya tiene<br/>expediente?"}
+        Q2 -- Sí --> Q3["Reenvía el enlace a su<br/>correo registrado<br/>(no se muestra en pantalla)"]
+        Q2 -- No --> Q4{"¿RUT existe?"}
+        Q4 -- Sí --> Q5["Muestra datos enmascarados<br/>(configurable) y completa<br/>solo los pendientes"]
+        Q4 -- No --> Q6["Completa el<br/>formulario completo"]
+        Q5 --> Q7["Marca sus dudas<br/>= ruta propuesta"]
+        Q6 --> Q7
+
+        C0 -- "Staff" --> S1["Responsable de Iniciado<br/>ingresa el RUT"]
+        S1 --> S2{"¿Ya tiene<br/>expediente?"}
+        S2 -- Sí --> S3["Muestra el expediente<br/>y permite reenviar el enlace"]
+        S2 -- No --> S4{"¿RUT existe?"}
+        S4 -- Sí --> S5["Muestra datos completos;<br/>completa pendientes y<br/>corrige (excepto RUT)"]
+        S4 -- No --> S6["Ingresa todos<br/>los datos"]
+        S5 --> S7["¿Tiene dudas? Define la ruta:<br/>directa, con consultas<br/>o flujo alternativo"]
+        S6 --> S7
+
+        Q7 --> E1
+        S7 --> E1
+        E1["CREAR EXPEDIENTE (1 transacción)<br/>• Staff: Iniciado COMPLETADO y<br/>primera fase de la ruta EN_ESPERA<br/>• QR: Iniciado EN_ESPERA<br/>con la ruta propuesta<br/>• número de atención · token del enlace"]
+        E1 --> E2["Correo de inicio:<br/>resumen + enlace único"]
+        E1 --> E3["QR: redirige a la vista de seguimiento<br/>Staff: entrega el número de atención<br/>y la fase a la que debe dirigirse"]
+    end
+
+    E2 --> R(["Recorrido por las fases<br/>(§9.6.3)"])
+    E3 --> R
+
+    %% ── Estilos ──
+    classDef fin fill:#d4edda,stroke:#28a745,color:#155724
+    classDef datos fill:#e7f1ff,stroke:#0d6efd,color:#084298
+    classDef clave fill:#fff3cd,stroke:#d39e00,color:#664d03
+    classDef alerta fill:#f8d7da,stroke:#dc3545,color:#842029
+    class A6 fin
+    class P1 alerta
+    class B3,Q7,R datos
+    class E1,S7 clave

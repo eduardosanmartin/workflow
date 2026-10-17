@@ -1,0 +1,29 @@
+%% Estados de una atención (SPEC RF-13, RF-14, RF-27, RF-28, RF-29)
+stateDiagram-v2
+    [*] --> PLANIFICADA : se agrega a la ruta<br/>(inicio o derivación)
+    [*] --> EN_ESPERA : primera fase de la ruta
+    PLANIFICADA --> EN_ESPERA : se completa la atención anterior
+    PLANIFICADA --> [*] : se quita de la ruta<br/>(derivación, corrección o<br/>cambio de flujo)
+    EN_ESPERA --> EN_ATENCION : el responsable presiona «Atender»
+    EN_ATENCION --> COMPLETADO : «Finalizar y derivar»
+    EN_ATENCION --> COMPLETADO_CON_OBSERVACIONES : finaliza + texto de observación
+    EN_ESPERA --> DERIVADA : «Derivar ahora»
+    EN_ATENCION --> DERIVADA : «Derivar ahora»<br/>(en el flujo principal, la fase<br/>se replanifica después)
+    EN_ESPERA --> ABANDONADA : «Abandonó»<br/>(se retira de la fila)
+    ABANDONADA --> [*] : al reactivar se crea<br/>una nueva atención EN_ESPERA
+    COMPLETADO --> EN_ESPERA : reapertura (Gestor/Admin, con motivo)
+    COMPLETADO_CON_OBSERVACIONES --> EN_ESPERA : reapertura
+    note right of EN_ESPERA
+        Como máximo una atención
+        EN_ESPERA o EN_ATENCION
+        por expediente.
+    end note
+    note right of COMPLETADO
+        Completar MNP (cierre digital) o la
+        fase final de un flujo alternativo
+        (cierre manual, con detalle) deja al
+        expediente MATRICULADO. En un flujo
+        alternativo, al completarse una
+        atención pasa a EN_ESPERA la fase
+        siguiente de la secuencia fija.
+    end note

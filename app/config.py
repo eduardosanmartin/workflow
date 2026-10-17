@@ -24,7 +24,8 @@ class Config:
     DATABASE_HOST = os.getenv("DATABASE_HOST", "localhost")
     DATABASE_PORT = int(os.getenv("DATABASE_PORT") or 5432)
 
-    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    # Flask-Limiter: Redis en producción (compartido por los workers); en memoria si no hay REDIS_URL (desarrollo).
+    RATELIMIT_STORAGE_URI = os.getenv("REDIS_URL") or "memory://"
 
     SMTP_HOST = os.getenv("SMTP_HOST", "")
     SMTP_PORT = int(os.getenv("SMTP_PORT") or 587)
