@@ -57,6 +57,10 @@
     {% if exp.puede_reabrir %}
     <a class="boton secundario" href="{{ url_for('ficha.reabrir_form', expediente_id=exp.expediente.id) }}">Reabrir {{ exp.a_reabrir.fase }}</a>
     {% endif %}
+    {% if exp.puede_reenviar %}
+    {{ ui.boton_post(url_for('ficha.reenviar', expediente_id=exp.expediente.id), 'Reenviar enlace', 'secundario',
+                     confirmar='¿Reenviar el enlace de seguimiento a ' ~ postulante.correo_personal ~ '?') }}
+    {% endif %}
   </div>
 
   <h3>Recorrido</h3>
@@ -102,6 +106,28 @@
   </div>
   {% else %}
   <p class="nota">Sin movimientos registrados.</p>
+  {% endif %}
+
+  <h3>Correos enviados</h3>
+  {% if exp.correos %}
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>Fecha</th><th>Correo</th><th>Destinatario</th><th>Estado</th><th>Enviado por</th></tr></thead>
+    <tbody>
+    {% for c in exp.correos %}
+    <tr>
+      <td>{{ c.fecha }}</td>
+      <td data-etiqueta="Correo">{{ c.tipo }}</td>
+      <td data-etiqueta="Destinatario">{{ c.destinatario }}</td>
+      <td data-etiqueta="Estado">{% if c.estado == 'Error' %}<span class="insignia insignia-cerrado">⚠ Error</span> {{ c.detalle }}{% else %}<span class="insignia insignia-activo">✓ Enviado</span>{% endif %}</td>
+      <td data-etiqueta="Enviado por">{{ c.enviado_por }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="nota">Sin correos enviados.</p>
   {% endif %}
 </section>
 {% endfor %}

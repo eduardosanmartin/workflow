@@ -84,7 +84,7 @@ def consultar():
             return _cerrado()
         return _rut(error.mensaje, ingresado, error.codigo_http)
     if consulta["expediente"] is not None:
-        inicio.registrar_reenvio_qr(consulta["expediente"])
+        inicio.reenviar_por_qr(consulta["expediente"])
         return render_template("qr/enlace_enviado.html", correo=consulta["correo_enmascarado"])
     _recordar_rut(consulta["rut"])
     return _formulario(consulta)
@@ -103,7 +103,7 @@ def iniciar():
     try:
         expediente = inicio.iniciar_por_qr(datos, marcadas)
     except inicio.ExpedienteExistenteError as error:
-        inicio.registrar_reenvio_qr(error.expediente)
+        inicio.reenviar_por_qr(error.expediente)
         correo = inicio.enmascarar_correo_de(error.expediente)
         return render_template("qr/enlace_enviado.html", correo=correo)
     except inicio.DatosInvalidosError as error:

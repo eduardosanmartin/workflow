@@ -3,7 +3,7 @@
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from app import models as m
-from app.services import ficha, inicio
+from app.services import correo, ficha, inicio
 from app.services import workflow as wf
 
 bp = Blueprint("ficha", __name__, url_prefix="/ficha")
@@ -88,6 +88,18 @@ def reactivar(expediente_id):
     expediente = _expediente(expediente_id)
     try:
         flash(ficha.reactivar(expediente_id, request.form, g.usuario), "exito")
+    except wf.ReglaVioladaError as error:
+        return _error(error, expediente)
+    return _a_la_ficha(expediente)
+
+
+# ── Reenvío del enlace (RF-21, cualquier rol) ──
+
+@bp.post("/expediente/<int:expediente_id>/reenviar")
+def reenviar(expediente_id):
+    expediente = _expediente(expediente_id)
+    try:
+        flash(correo.reenviar(expediente_id, g.usuario), "exito")
     except wf.ReglaVioladaError as error:
         return _error(error, expediente)
     return _a_la_ficha(expediente)

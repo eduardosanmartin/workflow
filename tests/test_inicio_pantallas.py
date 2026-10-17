@@ -199,7 +199,7 @@ def test_qr_con_expediente_no_muestra_el_enlace(publico, staff, proceso):
         html = texto(respuesta)
         assert "Te enviamos tu enlace a j***@gmail.com" in html and token not in html
     assert m.Expediente.select().count() == 1
-    assert m.Auditoria.select().where(m.Auditoria.accion == "SOLICITUD_REENVIO_QR").count() == 2
+    assert m.EnvioCorreo.select().where(m.EnvioCorreo.tipo == "REENVIO_QR").count() == 2
 
 
 # ── Seguimiento ──

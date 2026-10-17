@@ -6,7 +6,8 @@ sin duplicados (RF-19) y dos inicios simultáneos del mismo RUT producen un solo
 expediente (RNF-06). Los mismos bloqueos usa la configuración para cambiar la
 estructura, de modo que no se puede agregar una fase mientras se crea el primer expediente.
 
-El correo de inicio (RF-21) se agrega en el paso de correo.
+Después de confirmar la transacción se envía el correo de inicio (RF-21); si falla, el
+expediente queda creado igual.
 """
 
 import secrets
@@ -317,6 +318,7 @@ def iniciar_por_staff(datos: dict, ruta: dict, por, ahora=None):
             "flujo_alternativo_id": recorrido.flujo_alternativo_id,
             "ruta": _foto_ruta(recorrido, estructura),
         })
+    _correo().enviar_inicio(expediente, ahora)
     return expediente
 
 
@@ -404,6 +406,7 @@ def iniciar_por_qr(datos: dict, consultas, ahora=None):
             "numero_atencion": numero_visible(proceso, expediente.numero_atencion),
             "ruta_propuesta": _foto_ruta(recorrido, estructura),
         })
+    _correo().enviar_inicio(expediente, ahora)
     return expediente
 
 
@@ -412,10 +415,15 @@ def enmascarar_correo_de(expediente) -> str:
         "correo_personal"]
 
 
-def registrar_reenvio_qr(expediente):
-    """RF-10 paso 4: el RUT ya tiene expediente. El envío real del enlace llega con el paso de
-    correo; por ahora queda auditada la solicitud."""
-    auditoria.registrar("SOLICITUD_REENVIO_QR", "expediente", expediente.id, actor="PUBLICO")
+def reenviar_por_qr(expediente):
+    """RF-10 paso 4: el RUT ya tiene expediente; se le reenvía el enlace a su correo registrado."""
+    _correo().reenviar_qr(expediente)
+
+
+def _correo():
+    # Importación diferida: el correo arma su contenido con la vista de seguimiento, que usa este módulo
+    from app.services import correo
+    return correo
 
 
 # ── Resumen para la pantalla de confirmación ────────────────────────

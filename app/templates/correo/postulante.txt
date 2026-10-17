@@ -1,0 +1,33 @@
+{{ proceso }}
+
+Hola, {{ primer_nombre }}.
+{% if matriculado %}
+¡Ya estás matriculado! Completaste tu proceso de matrícula.
+
+Tu número de atención fue: {{ numero }}
+
+Fases recorridas:
+{% for paso in pasos %}  ✓ {{ paso.fase }}
+{% endfor %}{% else %}
+Tu número de atención es: {{ numero }}
+{% if en_pausa %}
+Tu atención quedó en pausa. Acércate a un punto de atención para retomarla.
+{% elif instruccion %}
+{{ instruccion }}
+{% endif %}
+Tu recorrido:
+{% for paso in pasos %}  {{ {'hecho': '✓', 'actual': '→', 'pendiente': '○'}[paso.estado] }} {{ paso.fase }}{% if paso.estado == 'actual' %} (fase actual){% endif %}
+{% endfor %}{% endif %}{% if carreras %}
+Carreras de interés:
+{% for c in carreras %}  {{ loop.index }}. {{ c }}
+{% endfor %}{% endif %}
+{% if matriculado %}Puedes revisar tu recorrido en{% else %}Sigue tu recorrido en línea, se actualiza solo{% endif %}:
+{{ enlace }}
+
+Este enlace es personal: no lo compartas.
+
+--
+Este correo se envía desde una cuenta que no recibe respuestas; por favor no respondas a este mensaje.
+{% if contacto %}Si tienes dudas, contacta a la Unidad de Matrícula: {{ contacto }}
+{% endif %}Usamos tus datos solo para gestionar tu proceso de matrícula (Ley 19.628).
+Universidad Adventista de Chile

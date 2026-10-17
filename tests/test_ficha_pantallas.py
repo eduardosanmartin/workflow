@@ -140,3 +140,31 @@ def test_reabrir(app, admin, staff, proceso):
     respuesta = staff.post(f"/ficha/expediente/{exp.id}/reabrir", data={"motivo": "Error", "atencion": objetivo})
     assert respuesta.status_code == 302
     assert ruta_de(exp)[1] == ("BEC", wf.EN_ESPERA)
+
+
+# ── Correos (RF-21) ──
+
+def test_reenviar_enlace_y_historial_de_correos(app, admin, proceso, staff, monkeypatch):
+    from app.services import correo
+    exp = expediente(app, admin)
+    ficha_url = f"/ficha/{exp.postulante_id}"
+    html = texto(staff.get(ficha_url))
+    assert "Reenviar enlace" in html and "Correos enviados" in html and "SMTP no configurado" in html
+
+    respuesta = staff.post(f"/ficha/expediente/{exp.id}/reenviar", follow_redirects=True)
+    assert "No se pudo enviar el correo: SMTP no configurado" in texto(respuesta)
+
+    app.config["SMTP_HOST"] = "smtp.ejemplo.cl"
+    monkeypatch.setattr(correo, "_enviar_smtp", lambda _mensaje: None)
+    respuesta = staff.post(f"/ficha/expediente/{exp.id}/reenviar", follow_redirects=True)
+    html = texto(respuesta)
+    assert "Enviamos el enlace a j***@gmail.com" in html and "Reenvío manual" in html
+    assert m.EnvioCorreo.select().where(m.EnvioCorreo.tipo == "REENVIO").count() == 2
+
+
+def test_cualquier_rol_reenvia(app, admin, proceso):
+    exp = expediente(app, admin)
+    finanzas = de_fase(app, proceso, "FIN", email="fin@unach.cl")
+    assert "Reenviar enlace" in texto(finanzas.get(f"/ficha/{exp.postulante_id}"))
+    assert finanzas.post(f"/ficha/expediente/{exp.id}/reenviar").status_code == 302
+    assert m.EnvioCorreo.select().where(m.EnvioCorreo.tipo == "REENVIO").count() == 1

@@ -4,7 +4,7 @@ correcciones de la ruta y reapertura de atenciones (RF-27)."""
 from peewee import JOIN
 
 from app import models as m
-from app.services import bandeja, recorridos, tiempo
+from app.services import bandeja, correo, recorridos, tiempo
 from app.services import workflow as wf
 from app.services.inicio import (
     buscar_postulante, consultas_numeradas, datos_de, nombres_de_carrera, normalizar_rut, numero_visible,
@@ -113,6 +113,8 @@ def _vista_expediente(expediente, usuario, ahora) -> dict:
         "siguiente": siguiente.nombre if siguiente else None,
         "atenciones": atenciones,
         "historial": _historial(expediente, estructura),
+        "correos": correo.historial(expediente),
+        "puede_reenviar": activo,  # RF-21: cualquier rol
         "puede_actuar": activo and actual is not None and _puede(usuario, actual.fase_id),
         "final_manual": (actual is not None and rec.en_flujo_alternativo
                          and actual.fase_id == estructura.flujo(rec.flujo_alternativo_id).fase_final_id),

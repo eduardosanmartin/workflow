@@ -10,7 +10,7 @@ from peewee import fn
 
 from app import models as m
 from app.db import db
-from app.services import auditoria, recorridos, tiempo
+from app.services import auditoria, correo, recorridos, tiempo
 from app.services import workflow as wf
 from app.services.inicio import consultas_numeradas, numero_visible, opciones_de_flujo
 
@@ -257,6 +257,8 @@ def operar_auditado(expediente_id, usuario, accion, cambio, version=None) -> str
         expediente, rec, (antes, extra) = recorridos.ejecutar(expediente_id, operacion, version)
         accion = extra.pop("accion", accion)
         auditoria.registrar(accion, "expediente", expediente.id, antes, {**_foto(rec), **extra}, usuario)
+    if antes["estado"] != wf.MATRICULADO and rec.estado == wf.MATRICULADO:
+        correo.enviar_matricula(expediente)  # RF-21, después de confirmar la transacción
     return _mensaje(expediente, rec)
 
 
