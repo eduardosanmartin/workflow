@@ -174,3 +174,38 @@ tr.inactivo td { color: var(--texto-suave); }
   .tabla-apilable td.acciones-fila { white-space: normal; padding-top: .5rem; }
   .tabla-apilable td.acciones-fila > * { display: inline-block; margin: 0 .75rem .4rem 0; }
 }
+
+/* ── Inicio de proceso, QR y seguimiento ── */
+select {
+  width: 100%; margin-top: .25rem; padding: .6rem .7rem;
+  border: 1px solid var(--borde); border-radius: 6px; font: inherit; background: var(--superficie); color: var(--texto);
+}
+input[type=tel] {
+  width: 100%; margin-top: .25rem; padding: .6rem .7rem;
+  border: 1px solid var(--borde); border-radius: 6px; font: inherit;
+}
+select:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
+[aria-invalid=true] { border-color: var(--error-texto); }
+.error-campo { display: block; color: var(--error-texto); font-weight: 600; margin-top: .2rem; }
+.subopciones { margin: .25rem 0 .5rem 1.75rem; }
+fieldset.sin-borde { border: 0; padding: 0; margin: 0; }
+fieldset.sin-borde legend h2 { margin: 0 0 .25rem; }
+.centrada { text-align: center; }
+.centrada .mensaje { text-align: left; }
+.numero-atencion { font-size: 3rem; font-weight: 800; letter-spacing: .05em; margin: 0 0 .5rem; color: var(--primario); }
+.destino { font-size: 1.2rem; margin: .5rem 0 1rem; }
+.datos-lista { grid-template-columns: 1fr; }
+.angosta-publica { max-width: 560px; padding-bottom: 5rem; }
+.recorrido { list-style: none; padding: 0; margin: 0 0 1rem; }
+.recorrido li { display: flex; gap: .6rem; align-items: center; padding: .5rem .25rem; border-bottom: 1px solid var(--borde); }
+.recorrido li:last-child { border-bottom: 0; }
+.marca-paso { width: 1.5rem; text-align: center; font-weight: 700; }
+.paso-hecho { color: var(--exito-texto); }
+.paso-actual { font-weight: 700; background: var(--info-fondo); color: var(--info-texto); border-radius: 6px; }
+.paso-pendiente { color: var(--texto-suave); }
+.estado-fijo {
+  position: fixed; left: 0; right: 0; bottom: 0; padding: .9rem 1rem; text-align: center;
+  font-weight: 700; font-size: 1.1rem; box-shadow: 0 -2px 6px rgba(0, 0, 0, .12);
+}
+.estado-pendiente { background: var(--error-fondo); color: var(--error-texto); }
+.estado-matriculado { background: var(--exito-fondo); color: var(--exito-texto); }

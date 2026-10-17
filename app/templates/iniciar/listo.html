@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Proceso iniciado{% endblock %}
+{% block contenido %}
+<section class="tarjeta angosta centrada">
+  <div class="mensaje mensaje-exito" role="status"><span class="icono" aria-hidden="true">✔</span>
+    <span>Proceso iniciado para {{ postulante.nombres }} {{ postulante.apellidos }}.</span></div>
+  <p class="nota">Número de atención</p>
+  <p class="numero-atencion">{{ numero }}</p>
+  {% if fase_actual %}
+  <p class="destino">Debe dirigirse a: <strong>{{ fase_actual }}</strong></p>
+  {% endif %}
+  <p class="nota">Ruta: {{ ruta|join(' → ') }}{% if flujo %} ({{ flujo }}){% endif %}</p>
+  <a class="boton primario-corto" href="{{ url_for('iniciar.rut') }}">Iniciar otro proceso</a>
+</section>
+{% endblock %}

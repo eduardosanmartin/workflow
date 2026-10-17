@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Iniciar proceso{% endblock %}
+{% block contenido %}
+<section class="tarjeta angosta">
+  <h1>Iniciar proceso</h1>
+  <p class="nota">{{ g.proceso.nombre }}. Ingrese el RUT del postulante.</p>
+  <form method="post" action="{{ url_for('iniciar.buscar') }}">
+    {{ ui.csrf() }}
+    <label for="rut">RUT</label>
+    <input id="rut" name="rut" type="text" value="{{ rut }}" required autofocus autocomplete="off"
+           placeholder="12.345.678-5" maxlength="15">
+    <button type="submit" class="primario">Continuar</button>
+  </form>
+</section>
+{% endblock %}

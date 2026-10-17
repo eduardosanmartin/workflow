@@ -1,0 +1,32 @@
+{# Campos del postulante (RF-06), con su error debajo y la marca de "pendiente" #}
+
+{% macro error(nombre, errores) %}
+{% if errores.get(nombre) %}<small class="error-campo" id="error-{{ nombre }}"><span aria-hidden="true">✖</span> {{ errores[nombre] }}</small>{% endif %}
+{% endmacro %}
+
+{% macro etiqueta(nombre, texto, pendiente) %}
+<label for="{{ nombre }}">{{ texto }}{% if pendiente %} <span class="insignia insignia-borrador">Pendiente</span>{% endif %}</label>
+{% endmacro %}
+
+{% macro campo(nombre, texto, datos, errores, tipo="text", maximo=None, pendiente=False, autocompletar=None, modo=None) %}
+{{ etiqueta(nombre, texto, pendiente) }}
+<input id="{{ nombre }}" name="{{ nombre }}" type="{{ tipo }}" value="{{ datos.get(nombre) or '' }}" required
+       {% if maximo %}maxlength="{{ maximo }}"{% endif %}
+       {% if autocompletar %}autocomplete="{{ autocompletar }}"{% endif %}
+       {% if modo %}inputmode="{{ modo }}"{% endif %}
+       {% if errores.get(nombre) %}aria-invalid="true" aria-describedby="error-{{ nombre }}"{% endif %}>
+{{ error(nombre, errores) }}
+{% endmacro %}
+
+{% macro carrera(nombre, texto, datos, errores, carreras, requerido=False, pendiente=False) %}
+{{ etiqueta(nombre, texto, pendiente) }}
+<select id="{{ nombre }}" name="{{ nombre }}" {% if requerido %}required{% endif %}
+        {% if errores.get(nombre) %}aria-invalid="true" aria-describedby="error-{{ nombre }}"{% endif %}>
+  <option value="">{{ 'Seleccione…' if requerido else 'Ninguna' }}</option>
+  {% for c in carreras %}
+  <option value="{{ c.codigo }}" {% if (datos.get(nombre) or '')|upper == c.codigo %}selected{% endif %}>
+    {{ c.nombre }}{% if not c.activo %} (inactiva){% endif %}</option>
+  {% endfor %}
+</select>
+{{ error(nombre, errores) }}
+{% endmacro %}

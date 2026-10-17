@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Expediente existente{% endblock %}
+{% block contenido %}
+<section class="tarjeta angosta">
+  <div class="mensaje mensaje-aviso" role="status"><span class="icono" aria-hidden="true">⚠</span>
+    <span>{{ postulante.nombres }} {{ postulante.apellidos }} ya tiene su proceso iniciado. No se crea otro expediente.</span></div>
+  <dl class="datos">
+    <div><dt>Número de atención</dt><dd>{{ numero }}</dd></div>
+    <div><dt>Fase actual</dt><dd>{{ fase_actual or '—' }}</dd></div>
+    <div><dt>Ruta</dt><dd>{{ ruta|join(' → ') }}</dd></div>
+  </dl>
+  <p class="nota">El reenvío del enlace de seguimiento estará disponible desde la ficha del postulante.</p>
+  <a class="boton secundario" href="{{ url_for('iniciar.rut') }}">Iniciar otro proceso</a>
+</section>
+{% endblock %}

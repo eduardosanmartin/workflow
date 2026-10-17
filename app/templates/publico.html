@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block titulo %}Matrícula{% endblock %} · UNACH</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="{% block clase_body %}publico{% endblock %}">
+  <header class="barra">
+    <span class="marca">Matrícula UNACH</span>
+  </header>
+  <main class="contenido angosta-publica">
+    {% block contenido %}{% endblock %}
+  </main>
+</body>
+</html>

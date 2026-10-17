@@ -1,0 +1,62 @@
+{% extends "publico.html" %}
+{% import "_macros.html" as ui with context %}
+{% import "_postulante.html" as p with context %}
+{% block titulo %}Inicia aquí{% endblock %}
+{% block contenido %}
+{% set pend = consulta.pendientes %}
+{% set vista = consulta.vista %}
+{% set etiquetas = {'nombres': 'Nombres', 'apellidos': 'Apellidos', 'telefono': 'Teléfono',
+                    'correo_personal': 'Correo personal', 'carrera1': 'Carrera 1', 'carrera2': 'Carrera 2',
+                    'carrera3': 'Carrera 3'} %}
+<form method="post" action="{{ url_for('qr.iniciar') }}">
+  {{ ui.csrf() }}
+  <input type="hidden" name="rut" value="{{ consulta.rut }}">
+
+  <section class="tarjeta">
+    <h1>{{ consulta.proceso.nombre }}</h1>
+    {% if errores %}
+    <div class="mensaje mensaje-error" role="alert"><span class="icono" aria-hidden="true">✖</span><span>Revisa los datos marcados.</span></div>
+    {% endif %}
+
+    {% if consulta.existe %}
+      <p>Encontramos tus datos. Revisa que sean tuyos{% if pend %} y completa lo que falta{% endif %}.</p>
+      <dl class="datos datos-lista">
+        <div><dt>RUT</dt><dd>{{ consulta.rut }}</dd></div>
+        {% for campo, texto in etiquetas.items() if campo not in pend %}
+        <div><dt>{{ texto }}</dt><dd>{{ nombres_carrera.get(vista[campo], vista[campo]) if campo.startswith('carrera') else vista[campo] }}</dd></div>
+        {% endfor %}
+      </dl>
+      <p class="nota">Si algún dato está incorrecto, pide al staff que lo corrija.</p>
+    {% else %}
+      <p>Completa tus datos para iniciar tu proceso. RUT: <strong>{{ consulta.rut }}</strong></p>
+    {% endif %}
+
+    {% for campo, tipo, auto, modo in [('nombres', 'text', 'given-name', None), ('apellidos', 'text', 'family-name', None),
+                                       ('telefono', 'tel', 'tel', 'tel'), ('correo_personal', 'email', 'email', 'email')] if campo in pend %}
+      {{ p.campo(campo, etiquetas[campo], datos, errores, tipo=tipo, maximo=254 if campo == 'correo_personal' else 100,
+                 autocompletar=auto, modo=modo) }}
+    {% endfor %}
+    {% if 'carrera1' in pend %}{{ p.carrera('carrera1', 'Carrera de interés 1', datos, errores, carreras, requerido=True) }}{% endif %}
+    {% if 'carrera2' in pend %}{{ p.carrera('carrera2', 'Carrera de interés 2 (opcional)', datos, errores, carreras) }}{% endif %}
+    {% if 'carrera3' in pend %}{{ p.carrera('carrera3', 'Carrera de interés 3 (opcional)', datos, errores, carreras) }}{% endif %}
+  </section>
+
+  {% if consulta.consultas %}
+  <section class="tarjeta separada">
+    <fieldset class="sin-borde">
+      <legend><h2>¿Tienes dudas sobre alguno de estos temas?</h2></legend>
+      <small>Marca los que quieras consultar. Si no tienes dudas, déjalos sin marcar.</small>
+      {% for f in consulta.consultas %}
+      <label class="casilla"><input type="checkbox" name="consultas" value="{{ f.id }}" {% if f.id|string in marcadas %}checked{% endif %}> {{ f.nombre }}</label>
+      {% endfor %}
+    </fieldset>
+  </section>
+  {% endif %}
+
+  <section class="tarjeta separada">
+    <p class="nota">Usamos tus datos solo para gestionar tu proceso de matrícula y enviarte tu enlace de seguimiento.
+      Se eliminan al terminar el período lectivo (Ley 19.628 y Ley 21.719).</p>
+    <button type="submit" class="primario">Iniciar mi proceso</button>
+  </section>
+</form>
+{% endblock %}

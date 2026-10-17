@@ -1,6 +1,6 @@
 import logging
 
-from flask import Flask, render_template
+from flask import Flask, g, render_template
 from peewee import OperationalError
 
 from app import db
@@ -17,17 +17,20 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     limiter.init_app(app)
 
-    from app.blueprints import admin, auth, principal
+    from app.blueprints import admin, auth, iniciar, principal, qr, seguimiento
     from app.security import cargar_usuario
+    from app.services.inicio import puede_iniciar
 
     app.before_request(cargar_usuario)
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(principal.bp)
-    app.register_blueprint(admin.bp)
+    for blueprint in (auth, principal, admin, iniciar, qr, seguimiento):
+        app.register_blueprint(blueprint.bp)
 
     @app.context_processor
     def _roles():
-        return {"NOMBRE_ROL": principal.ROLES}
+        def _puede_iniciar():
+            usuario = g.get("usuario")
+            return usuario is not None and not usuario.must_change_password and puede_iniciar(usuario)
+        return {"NOMBRE_ROL": principal.ROLES, "puede_iniciar": _puede_iniciar}
 
     @app.errorhandler(403)
     def _prohibido(_e):

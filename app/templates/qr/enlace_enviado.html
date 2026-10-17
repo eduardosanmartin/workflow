@@ -1,0 +1,9 @@
+{% extends "publico.html" %}
+{% block titulo %}Tu enlace{% endblock %}
+{% block contenido %}
+<section class="tarjeta">
+  <div class="mensaje mensaje-info" role="status"><span class="icono" aria-hidden="true">ℹ</span>
+    <span>Tu proceso ya está iniciado. Te enviamos tu enlace a {{ correo }}.</span></div>
+  <p class="nota">Si no te llega, acércate al staff de matrícula.</p>
+</section>
+{% endblock %}

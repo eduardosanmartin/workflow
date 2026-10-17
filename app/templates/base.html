@@ -9,10 +9,13 @@
 <body>
   <header class="barra">
     <a class="marca" href="{{ url_for('principal.inicio') }}">WorkFlow Matrícula</a>
-    {% if g.usuario and not g.usuario.must_change_password and g.usuario.rol == 'ADMIN' %}
-    <nav class="menu" aria-label="Administración">
+    {% if g.usuario and not g.usuario.must_change_password %}
+    <nav class="menu" aria-label="Menú principal">
+      {% if puede_iniciar() %}<a href="{{ url_for('iniciar.rut') }}">Iniciar proceso</a>{% endif %}
+      {% if g.usuario.rol == 'ADMIN' %}
       <a href="{{ url_for('admin.procesos') }}">Procesos</a>
       <a href="{{ url_for('admin.usuarios') }}">Usuarios</a>
+      {% endif %}
     </nav>
     {% endif %}
     {% if g.usuario %}

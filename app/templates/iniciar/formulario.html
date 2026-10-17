@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% import "_postulante.html" as p with context %}
+{% block titulo %}Iniciar proceso{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('iniciar.rut') }}">Iniciar proceso</a> › {{ datos.rut }}</p>
+<form method="post" action="{{ url_for('iniciar.confirmar') }}" class="media">
+  {{ ui.csrf() }}
+  <input type="hidden" name="rut" value="{{ datos.rut }}">
+
+  <section class="tarjeta">
+    <h1>RUT {{ datos.rut }}</h1>
+    {% if existe %}
+      <p class="nota">Postulante registrado. Confirme sus datos con él y corrija lo que haya cambiado (el RUT no se puede corregir).
+        {% if pendientes %}Complete los campos marcados como pendientes.{% endif %}</p>
+    {% else %}
+      <p class="nota">RUT sin registro. Ingrese los datos que le entrega el postulante.</p>
+    {% endif %}
+    <div class="fila">
+      <div>{{ p.campo('nombres', 'Nombres', datos, errores, maximo=100, pendiente='nombres' in pendientes) }}</div>
+      <div>{{ p.campo('apellidos', 'Apellidos', datos, errores, maximo=100, pendiente='apellidos' in pendientes) }}</div>
+      <div>{{ p.campo('telefono', 'Teléfono', datos, errores, tipo='tel', maximo=20, pendiente='telefono' in pendientes) }}</div>
+      <div>{{ p.campo('correo_personal', 'Correo personal', datos, errores, tipo='email', maximo=254, pendiente='correo_personal' in pendientes) }}</div>
+    </div>
+    <fieldset>
+      <legend>Carreras de interés (en orden de preferencia)</legend>
+      {{ p.carrera('carrera1', 'Carrera 1', datos, errores, carreras, requerido=True, pendiente='carrera1' in pendientes) }}
+      {{ p.carrera('carrera2', 'Carrera 2 (opcional)', datos, errores, carreras) }}
+      {{ p.carrera('carrera3', 'Carrera 3 (opcional, requiere la 2)', datos, errores, carreras) }}
+    </fieldset>
+  </section>
+
+  <section class="tarjeta separada">
+    <h2 id="titulo-dudas">¿El postulante tiene dudas?</h2>
+    <p class="nota">Becas, beneficios, pago u otros temas. Define la ruta del postulante.</p>
+    <fieldset aria-labelledby="titulo-dudas">
+      <legend class="oculto">Ruta</legend>
+      <label class="casilla"><input type="radio" name="dudas" value="no" required {% if ruta.get('dudas') == 'no' %}checked{% endif %}>
+        <span><strong>No:</strong> ruta directa a {{ mnp.nombre }}</span></label>
+
+      <label class="casilla"><input type="radio" name="dudas" value="si" {% if ruta.get('dudas') == 'si' %}checked{% endif %}>
+        <span><strong>Sí:</strong> pasa por fases de consulta y termina en {{ mnp.nombre }}</span></label>
+      {% if consultas %}
+      <div class="subopciones">
+        <small>Numere 1, 2, 3… las fases que debe visitar, en ese orden. Deje en blanco las demás.</small>
+        {% for f in consultas %}
+        <label class="posicion"><input type="number" min="1" max="{{ consultas|length }}" name="orden_{{ f.id }}"
+               value="{{ ruta.get('orden_' ~ f.id, '') }}" aria-label="Orden de {{ f.nombre }}"> {{ f.nombre }}</label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="nota subopciones">El proceso no tiene fases de consulta.</p>
+      {% endif %}
+
+      {% if flujos %}
+      <label class="casilla"><input type="radio" name="dudas" value="flujo" {% if ruta.get('dudas') == 'flujo' %}checked{% endif %}>
+        <span><strong>Flujo alternativo:</strong> el caso no puede terminar en {{ mnp.nombre }}</span></label>
+      <div class="subopciones">
+        <label for="entrada" class="oculto">Flujo y fase de entrada</label>
+        <select id="entrada" name="entrada">
+          <option value="">Elija el flujo y la fase de entrada…</option>
+          {% for valor, texto in flujos %}
+          <option value="{{ valor }}" {% if ruta.get('entrada') == valor %}selected{% endif %}>{{ texto }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </fieldset>
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Iniciar proceso</button>
+      <a href="{{ url_for('iniciar.rut') }}">Cancelar</a>
+    </div>
+  </section>
+</form>
+{% endblock %}
