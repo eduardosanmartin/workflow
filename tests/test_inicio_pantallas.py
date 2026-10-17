@@ -184,16 +184,18 @@ def test_qr_rut_nuevo_redirige_al_seguimiento(publico, proceso):
 
 
 def test_qr_errores_vuelven_al_formulario(publico, proceso):
+    publico.post("/qr/rut", data={"rut": "12.345.678-5"})
     respuesta = publico.post("/qr/iniciar", data=datos(telefono="123"))
     assert respuesta.status_code == 422 and "entre 8 y 15 dígitos" in texto(respuesta)
     assert m.Expediente.select().count() == 0
 
 
 def test_qr_con_expediente_no_muestra_el_enlace(publico, staff, proceso):
-    confirmar(staff)
+    publico.post("/qr/rut", data={"rut": "12.345.678-5"})  # aún sin expediente
+    confirmar(staff)  # el staff lo inicia mientras el postulante completa el QR
     token = m.Expediente.get().token_seguimiento
-    for respuesta in (publico.post("/qr/rut", data={"rut": "12.345.678-5"}),
-                      publico.post("/qr/iniciar", data=datos())):
+    for respuesta in (publico.post("/qr/iniciar", data=datos()),
+                      publico.post("/qr/rut", data={"rut": "12.345.678-5"})):
         html = texto(respuesta)
         assert "Te enviamos tu enlace a j***@gmail.com" in html and token not in html
     assert m.Expediente.select().count() == 1

@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex">
   <title>{% block titulo %}Matrícula{% endblock %} · UNACH</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block scripts %}{% endblock %}
 </head>
 <body class="{% block clase_body %}publico{% endblock %}">
   <header class="barra">

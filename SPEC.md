@@ -296,7 +296,7 @@ Flujo:
 7. El postulante queda `EN_ESPERA` en la fase inicial, con una **ruta propuesta** según lo que marcó. Un responsable de "Iniciado" lo atiende, revisa con él sus dudas y **confirma o ajusta la ruta** (RF-14). Su vista de seguimiento le indica que se dirija a la fase inicial.
 
 Protección contra abuso:
-- Límite de solicitudes por IP y CAPTCHA.
+- Límite de solicitudes por IP y CAPTCHA (Cloudflare Turnstile) en el paso del RUT. El paso siguiente solo acepta el RUT que pasó el CAPTCHA, durante 30 minutos.
 - Límite de reenvíos del enlace por expediente: como máximo 3 por hora, sumando el reenvío por QR y el manual. Superado el límite, el QR muestra el mismo mensaje sin enviar, para no revelar nada, y el intento queda auditado.
 - Cada consulta de un RUT existente queda auditada (actor `PUBLICO`, con IP).
 
@@ -1192,6 +1192,12 @@ SMTP_FROM_EMAIL=matricula-noreply@unach.cl
 SMTP_FROM_NAME=Matrícula UNACH
 SMTP_USE_TLS=True
 CONTACTO_MATRICULA=                           # pendiente: correo o teléfono de contacto que se muestra en los correos
+
+# ── CAPTCHA del formulario QR (Cloudflare Turnstile) ──
+# Vacíos: CAPTCHA desactivado (solo desarrollo). Claves de prueba de Cloudflare que siempre aprueban:
+#   sitio 1x00000000000000000000AA · secreta 1x0000000000000000000000000000000AA
+TURNSTILE_SITE_KEY=                           # pendiente: se obtiene en dash.cloudflare.com al registrar el dominio
+TURNSTILE_SECRET_KEY=                         # pendiente
 
 # ── Super administrador inicial ──
 SUPERADMIN_EMAIL=
