@@ -4,7 +4,10 @@ Solo expone lo que el postulante necesita: número de atención, primer nombre, 
 su recorrido. Nunca el RUT, el teléfono, el correo, las observaciones ni los responsables.
 """
 
+import hashlib
+
 from app import models as m
+from app.db import db
 from app.services import recorridos
 from app.services import workflow as wf
 from app.services.inicio import datos_de, nombres_de_carrera, numero_visible
@@ -13,6 +16,31 @@ from app.services.postulantes import CARRERAS
 # Atenciones que no se muestran: la fase interrumpida vuelve a planificarse más adelante,
 # y el abandono se informa con un mensaje propio
 _OCULTAS = (wf.DERIVADA, wf.ABANDONADA)
+
+
+# RNF-04: el sondeo cada 10 s de miles de postulantes resuelve con una sola consulta si algo
+# cambió (estado del expediente y del proceso, datos del postulante y cada atención de la ruta).
+# Solo cuando cambia se arma la vista completa.
+_FIRMA = """
+SELECT e.estado, p.estado, po.actualizado_en,
+       (SELECT string_agg(a.id || ':' || a.secuencia || ':' || a.estado || ':' || a.version, ','
+                          ORDER BY a.secuencia)
+          FROM atencion a WHERE a.expediente_id = e.id)
+  FROM expediente e
+  JOIN proceso p ON p.id = e.proceso_id
+  JOIN postulante po ON po.id = e.postulante_id
+ WHERE e.token_seguimiento = %s
+"""
+
+
+def firma(token):
+    """Huella del estado visible del expediente, o None si el token no existe."""
+    if not token or len(token) > 64:
+        return None
+    fila = db.execute_sql(_FIRMA, (token,)).fetchone()
+    if fila is None:
+        return None
+    return hashlib.sha256(repr(fila).encode()).hexdigest()[:32]
 
 
 def por_token(token):

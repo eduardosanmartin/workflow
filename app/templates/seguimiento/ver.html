@@ -1,44 +1,13 @@
 {% extends "publico.html" %}
 {% block titulo %}Tu matrícula{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/seguimiento.js') }}" defer></script>{% endblock %}
 {% block contenido %}
-{% if finalizado %}
-<section class="tarjeta">
-  <div class="mensaje mensaje-info" role="status"><span class="icono" aria-hidden="true">ℹ</span>
-    <span>Este proceso ha finalizado.</span></div>
-</section>
-{% else %}
-<section class="tarjeta centrada">
-  <p class="nota">{{ proceso }}</p>
-  <p>Hola, {{ primer_nombre }}. Tu número de atención es</p>
-  <p class="numero-atencion">{{ numero }}</p>
-  {% if en_pausa %}
-  <div class="mensaje mensaje-aviso" role="status"><span class="icono" aria-hidden="true">⚠</span>
-    <span>Tu atención quedó en pausa. Acércate a un punto de atención para retomarla.</span></div>
-  {% elif instruccion %}
-  <p class="destino"><strong>{{ instruccion }}</strong></p>
-  {% endif %}
-</section>
-
-<section class="tarjeta separada">
-  <h2>Tu recorrido</h2>
-  <ol class="recorrido">
-    {% for paso in pasos %}
-    <li class="paso-{{ paso.estado }}">
-      <span class="marca-paso" aria-hidden="true">{{ {'hecho': '✓', 'actual': '➜', 'pendiente': '○'}[paso.estado] }}</span>
-      <span>{{ paso.fase }}</span>
-      <span class="oculto">({{ {'hecho': 'completada', 'actual': 'fase actual', 'pendiente': 'pendiente'}[paso.estado] }})</span>
-    </li>
-    {% endfor %}
-  </ol>
-  {% if carreras %}
-  <h2>Carreras de interés</h2>
-  <ol>{% for c in carreras %}<li>{{ c }}</li>{% endfor %}</ol>
-  {% endif %}
-</section>
-
-{# RF-20 y RNF-07: mensaje fijo con texto e ícono, no solo color #}
-<div class="estado-fijo {{ 'estado-matriculado' if matriculado else 'estado-pendiente' }}" role="status">
-  {% if matriculado %}<span aria-hidden="true">🟢</span> Matriculado{% else %}<span aria-hidden="true">🔴</span> No matriculado aún{% endif %}
+<div id="seguimiento" data-sondeo="{{ url_for('seguimiento.estado', token=token) }}" data-firma="{{ firma }}">
+{% include "seguimiento/_estado.html" %}
 </div>
+{% if not finalizado %}
+<p id="estado-sondeo" class="nota centrada">Esta página se actualiza sola cada 10 segundos.</p>
 {% endif %}
+{# Anuncia a los lectores de pantalla cuando cambia la fase a la que debe dirigirse #}
+<p id="anuncio" class="oculto" aria-live="polite"></p>
 {% endblock %}
