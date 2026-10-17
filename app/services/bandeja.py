@@ -212,7 +212,7 @@ def _foto(rec) -> dict:
     }
 
 
-def _version(valor) -> int:
+def leer_version(valor) -> int:
     try:
         return int(valor)
     except (TypeError, ValueError):
@@ -242,27 +242,33 @@ def _mensaje(expediente, rec) -> str:
     return texto
 
 
-def _operar(expediente_id, version, usuario, accion, cambio) -> str:
-    """Aplica `cambio(recorrido)` con bloqueo, permiso y versión, y lo audita.
+def operar_auditado(expediente_id, usuario, accion, cambio, version=None) -> str:
+    """Aplica `cambio(recorrido)` con el expediente bloqueado y lo audita en la misma
+    transacción, con la foto del recorrido antes y después.
 
-    `cambio` puede devolver datos extra para la auditoría; con la clave "accion" reemplaza
-    la acción auditada (ej.: el cierre manual).
+    `cambio` valida el permiso y puede devolver datos extra para la auditoría; con la clave
+    "accion" reemplaza la acción auditada (ej.: el cierre manual).
     """
-    version = _version(version)
-
     def operacion(rec):
-        actual = rec._exigir_actual()
-        _exigir_permiso(usuario, actual.fase_id)
         antes = _foto(rec)
-        origen = rec.estructura.fase(actual.fase_id).nombre
-        extra = cambio(rec) or {}
-        return antes, {"origen": origen, **extra}
+        return antes, cambio(rec) or {}
 
     with db.atomic():
         expediente, rec, (antes, extra) = recorridos.ejecutar(expediente_id, operacion, version)
         accion = extra.pop("accion", accion)
         auditoria.registrar(accion, "expediente", expediente.id, antes, {**_foto(rec), **extra}, usuario)
     return _mensaje(expediente, rec)
+
+
+def _operar(expediente_id, version, usuario, accion, cambio) -> str:
+    """Acción sobre la atención actual: exige la versión vista y ser responsable de la fase."""
+    def con_permiso(rec):
+        actual = rec._exigir_actual()
+        _exigir_permiso(usuario, actual.fase_id)
+        origen = rec.estructura.fase(actual.fase_id).nombre
+        return {"origen": origen, **(cambio(rec) or {})}
+
+    return operar_auditado(expediente_id, usuario, accion, con_permiso, leer_version(version))
 
 
 def atender(expediente_id, version, usuario, ahora=None) -> str:

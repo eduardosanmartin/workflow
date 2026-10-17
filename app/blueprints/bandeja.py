@@ -47,9 +47,9 @@ def _filtros() -> dict:
 
 
 def _volver():
-    """La bandeja con los filtros que tenía el usuario (solo rutas de la bandeja)."""
+    """Vuelve a la bandeja con sus filtros, o a la ficha desde la que se actuó."""
     destino = destino_seguro(request.values.get("volver"))
-    return destino if destino.startswith(url_for("bandeja.ver")) else url_for("bandeja.ver")
+    return destino if destino.startswith((url_for("bandeja.ver"), url_for("ficha.buscar"))) else url_for("bandeja.ver")
 
 
 def _abortar_si_corresponde(error):

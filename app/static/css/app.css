@@ -96,7 +96,7 @@ button { font: inherit; cursor: pointer; }
 .icono { font-weight: 700; }
 
 /* ── Navegación y estructura ── */
-.menu { display: flex; gap: 1rem; margin-right: auto; margin-left: 1rem; }
+.menu { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin-right: auto; margin-left: 1rem; }
 .menu a { font-weight: 600; text-decoration: none; }
 .menu a:hover { text-decoration: underline; }
 .miga { color: var(--texto-suave); font-size: .9rem; margin: 0 0 .75rem; }
@@ -172,6 +172,7 @@ tr.inactivo td { color: var(--texto-suave); }
     content: attr(data-etiqueta); display: block; font-size: .75rem; color: var(--texto-suave);
   }
   .tabla-apilable td.acciones-fila { white-space: normal; padding-top: .5rem; }
+  .tabla-apilable td.vacia { display: none; }
   .tabla-apilable td.acciones-fila > * { display: inline-block; margin: 0 .75rem .4rem 0; }
 }
 
@@ -221,3 +222,10 @@ fieldset.sin-borde legend h2 { margin: 0 0 .25rem; }
 .insignia-flujo { background: #f3e8ff; color: #4c1d95; }
 .paso-interrumpido { color: var(--texto-suave); text-decoration: line-through; }
 .aviso-casilla { background: var(--aviso-fondo); color: var(--aviso-texto); padding: .5rem .75rem; border-radius: 6px; }
+
+/* ── Ficha del postulante ── */
+h3 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+.fase-actual { background: var(--info-fondo); color: var(--info-texto); border-radius: 8px; padding: .75rem 1rem; margin: .5rem 0 0; }
+.fase-actual p { margin: 0; }
+.fase-actual .nota { color: inherit; }
+tr.fila-actual td { background: var(--info-fondo); }

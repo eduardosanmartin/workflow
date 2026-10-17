@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Corregir la ruta{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Ficha</a> › Corregir la ruta</p>
+<section class="tarjeta media">
+  <h1>Corregir la ruta de {{ exp.numero }}</h1>
+  <p>{{ postulante.nombres }} {{ postulante.apellidos }} · fase actual: <strong>{{ exp.actual.fase }}</strong> ({{ exp.actual.estado }})</p>
+  <form method="post" action="{{ url_for('ficha.corregir', expediente_id=exp.expediente.id) }}">
+    {{ ui.csrf() }}
+    <input type="hidden" name="version" value="{{ exp.version }}">
+    {% if exp.es_mnp %}
+    <p class="nota">El postulante está en MNP: para enviarlo a una consulta use «Derivar ahora» desde la bandeja.</p>
+    {% else %}
+    <fieldset>
+      <legend>Fases de consulta planificadas</legend>
+      <small>Numere 1, 2, 3… las fases que debe visitar después de la actual. En blanco, va directo a MNP.</small>
+      {% for f in exp.consultas %}
+      <label class="posicion"><input type="number" min="1" max="{{ exp.consultas|length }}" name="orden_{{ f.id }}"
+             value="{{ form.get('orden_' ~ f.id, '') }}" aria-label="Orden de {{ f.nombre }}"> {{ f.nombre }}</label>
+      {% endfor %}
+    </fieldset>
+    {% endif %}
+    <label for="motivo">Motivo de la corrección</label>
+    <textarea id="motivo" name="motivo" rows="2" maxlength="2000" required>{{ form.get('motivo', '') }}</textarea>
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Guardar corrección</button>
+      <a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

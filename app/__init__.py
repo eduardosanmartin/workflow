@@ -17,13 +17,13 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     limiter.init_app(app)
 
-    from app.blueprints import admin, auth, bandeja, iniciar, principal, qr, seguimiento
+    from app.blueprints import admin, auth, bandeja, ficha, iniciar, principal, qr, seguimiento
     from app.security import cargar_usuario
     from app.services.bandeja import puede_ver as puede_ver_bandeja
     from app.services.inicio import proceso_activo, puede_iniciar
 
     app.before_request(cargar_usuario)
-    for blueprint in (auth, principal, admin, iniciar, bandeja, qr, seguimiento):
+    for blueprint in (auth, principal, admin, iniciar, bandeja, ficha, qr, seguimiento):
         app.register_blueprint(blueprint.bp)
 
     @app.context_processor

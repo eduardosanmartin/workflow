@@ -14,6 +14,7 @@
     <nav class="menu" aria-label="Menú principal">
       {% if puede_ver_bandeja() %}<a href="{{ url_for('bandeja.ver') }}">Bandeja</a>{% endif %}
       {% if puede_iniciar() %}<a href="{{ url_for('iniciar.rut') }}">Iniciar proceso</a>{% endif %}
+      <a href="{{ url_for('ficha.buscar') }}">Buscar postulante</a>
       {% if g.usuario.rol == 'ADMIN' %}
       <a href="{{ url_for('admin.procesos') }}">Procesos</a>
       <a href="{{ url_for('admin.usuarios') }}">Usuarios</a>

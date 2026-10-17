@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ postulante.nombres }} {{ postulante.apellidos }}{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('ficha.buscar') }}">Buscar postulante</a> › Ficha</p>
+<section class="tarjeta">
+  <h1>{{ postulante.nombres }} {{ postulante.apellidos }}</h1>
+  <dl class="datos">
+    <div><dt>RUT</dt><dd>{{ postulante.rut }}</dd></div>
+    <div><dt>Teléfono</dt><dd>{{ postulante.telefono or '—' }}</dd></div>
+    <div><dt>Correo personal</dt><dd>{{ postulante.correo_personal }}</dd></div>
+    <div><dt>Carreras de interés</dt><dd>{{ carreras|join(', ') or '—' }}</dd></div>
+  </dl>
+  {% if not postulante.activo %}<p class="alerta-texto">⚠ Postulante desactivado</p>{% endif %}
+</section>
+
+{% if not expedientes %}
+<p class="nota tarjeta separada">El postulante no ha iniciado ningún proceso.</p>
+{% endif %}
+
+{% for exp in expedientes %}
+{% set estado_clase = {'MATRICULADO': 'activo', 'EN_CURSO': 'borrador'}.get(exp.estado_codigo, 'cerrado') %}
+<section class="tarjeta separada" aria-labelledby="exp-{{ exp.expediente.id }}">
+  <div class="encabezado">
+    <h2 id="exp-{{ exp.expediente.id }}">{{ exp.proceso.nombre }} · <span class="numero-fila">{{ exp.numero }}</span></h2>
+    <span class="insignia insignia-{{ estado_clase }}">{{ exp.estado }}</span>
+  </div>
+  {% if exp.flujo %}<p><span class="insignia insignia-flujo">{{ exp.flujo }}</span></p>{% endif %}
+
+  {% if exp.actual %}
+  <div class="fase-actual">
+    <p class="nota">Fase actual</p>
+    <p class="destino"><strong>{{ exp.actual.fase }}</strong> · {{ exp.actual.estado }} hace {{ exp.actual.transcurrido }}</p>
+    {% if exp.siguiente %}<p class="nota">Fase siguiente: {{ exp.siguiente }}</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="acciones">
+    {% set volver = url_for('ficha.ver', postulante_id=postulante.id) %}
+    {% if exp.puede_actuar %}
+      {% if exp.actual.estado == 'En espera' %}
+      {{ ui.boton_post(url_for('bandeja.atender', expediente_id=exp.expediente.id), 'Atender', 'primario-corto sin-margen',
+                       {'version': exp.version, 'volver': volver}) }}
+      {% endif %}
+      <a class="boton secundario" href="{{ url_for('bandeja.finalizar_form', expediente_id=exp.expediente.id, volver=volver) }}">
+        {{ 'Cerrar matrícula manualmente' if exp.final_manual else 'Finalizar y derivar' }}</a>
+      {% if exp.actual.estado == 'En espera' %}
+      <a class="enlace-peligro" href="{{ url_for('bandeja.abandono_form', expediente_id=exp.expediente.id, volver=volver) }}">Abandonó</a>
+      {% endif %}
+    {% endif %}
+    {% if exp.puede_reactivar %}
+    <a class="boton primario-corto sin-margen" href="{{ url_for('ficha.reactivar_form', expediente_id=exp.expediente.id) }}">Reactivar</a>
+    {% endif %}
+    {% if exp.puede_corregir %}
+    <a class="boton secundario" href="{{ url_for('ficha.corregir_form', expediente_id=exp.expediente.id) }}">Corregir la ruta</a>
+    {% endif %}
+    {% if exp.puede_reabrir %}
+    <a class="boton secundario" href="{{ url_for('ficha.reabrir_form', expediente_id=exp.expediente.id) }}">Reabrir {{ exp.a_reabrir.fase }}</a>
+    {% endif %}
+  </div>
+
+  <h3>Recorrido</h3>
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>Fase</th><th>Estado</th><th>En espera desde</th><th>Inicio</th><th>Fin</th><th>Espera</th><th>Atención</th><th>Responsable</th><th>Observación</th></tr></thead>
+    <tbody>
+    {% for a in exp.atenciones %}
+    <tr class="{{ 'fila-actual' if a.actual else '' }}">
+      <td><strong>{{ a.fase }}</strong>{% if a.actual %} <span class="insignia insignia-activo">Actual</span>{% endif %}</td>
+      <td data-etiqueta="Estado">{{ a.estado }}</td>
+      <td data-etiqueta="En espera desde"{% if not a.en_espera_desde %} class="vacia"{% endif %}>{{ a.en_espera_desde or '—' }}</td>
+      <td data-etiqueta="Inicio"{% if not a.inicio %} class="vacia"{% endif %}>{{ a.inicio or '—' }}</td>
+      <td data-etiqueta="Fin"{% if not a.fin %} class="vacia"{% endif %}>{{ a.fin or '—' }}</td>
+      <td data-etiqueta="Espera"{% if not a.espera %} class="vacia"{% endif %}>{{ a.espera or '—' }}</td>
+      <td data-etiqueta="Atención"{% if not (a.duracion or a.sin_tiempo_atencion) %} class="vacia"{% endif %}>{% if a.sin_tiempo_atencion %}sin tiempo de atención{% else %}{{ a.duracion or '—' }}{% endif %}</td>
+      <td data-etiqueta="Responsable"{% if not a.responsable %} class="vacia"{% endif %}>{{ a.responsable or '—' }}</td>
+      <td data-etiqueta="Observación"{% if not (a.observacion or a.detalle_cierre) %} class="vacia"{% endif %}>{{ a.observacion or a.detalle_cierre or '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Historial de derivaciones</h3>
+  {% if exp.historial %}
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th>Fecha</th><th>Acción</th><th>Desde</th><th>Hacia</th><th>Usuario</th><th>Detalle</th></tr></thead>
+    <tbody>
+    {% for h in exp.historial %}
+    <tr>
+      <td>{{ h.fecha }}</td>
+      <td data-etiqueta="Acción">{{ h.accion }}</td>
+      <td data-etiqueta="Desde"{% if not h.desde %} class="vacia"{% endif %}>{{ h.desde or '—' }}</td>
+      <td data-etiqueta="Hacia"{% if not h.hacia %} class="vacia"{% endif %}>{{ h.hacia or '—' }}</td>
+      <td data-etiqueta="Usuario">{{ h.usuario }}</td>
+      <td data-etiqueta="Detalle"{% if not h.detalle %} class="vacia"{% endif %}>{{ h.detalle or '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="nota">Sin movimientos registrados.</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

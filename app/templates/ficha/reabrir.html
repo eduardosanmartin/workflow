@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Reabrir atención{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Ficha</a> › Reabrir atención</p>
+<section class="tarjeta angosta">
+  <h1>¿Reabrir {{ exp.a_reabrir.fase }} de {{ exp.numero }}?</h1>
+  <p>La atención vuelve a quedar en espera{% if exp.actual %} y {{ exp.actual.fase }} vuelve a quedar planificada{% endif %}.
+    {% if exp.estado_codigo == 'MATRICULADO' %}<strong>El expediente vuelve a «No matriculado aún».</strong>{% endif %}</p>
+  <form method="post" action="{{ url_for('ficha.reabrir', expediente_id=exp.expediente.id) }}">
+    {{ ui.csrf() }}
+    <input type="hidden" name="atencion" value="{{ exp.a_reabrir.id }}">
+    <label for="motivo">Motivo</label>
+    <textarea id="motivo" name="motivo" rows="2" maxlength="2000" required>{{ motivo }}</textarea>
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Sí, reabrir</button>
+      <a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

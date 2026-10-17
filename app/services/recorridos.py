@@ -101,7 +101,10 @@ def guardar(expediente, recorrido: wf.Recorrido):
         if quitadas:
             m.Atencion.delete().where(m.Atencion.id.in_(quitadas)).execute()
 
-        for secuencia, atencion in enumerate(recorrido.ruta, 1):
+        # Primero las que no quedan activas: el índice "una atención activa por expediente" no
+        # es diferible, así que la que deja de estar activa debe guardarse antes (ej.: reabrir)
+        pendientes = sorted(enumerate(recorrido.ruta, 1), key=lambda par: par[1].estado in wf.ESTADOS_ACTIVOS)
+        for secuencia, atencion in pendientes:
             datos = _datos(atencion)
             if atencion.id is None:
                 atencion.id = m.Atencion.insert(

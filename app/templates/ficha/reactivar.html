@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Reactivar{% endblock %}
+{% block contenido %}
+<p class="miga"><a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Ficha</a> › Reactivar</p>
+<section class="tarjeta angosta">
+  <h1>¿Reactivar a {{ exp.numero }}?</h1>
+  <p><strong>{{ postulante.nombres }} {{ postulante.apellidos }}</strong> volverá a la fila, en espera.
+    El resto de su ruta se conserva.</p>
+  <form method="post" action="{{ url_for('ficha.reactivar', expediente_id=exp.expediente.id) }}">
+    {{ ui.csrf() }}
+    <label for="fase">Fase en que queda en espera</label>
+    <select id="fase" name="fase">
+      {% for f in fases %}<option value="{{ f.id }}" {% if f.id == fase_id %}selected{% endif %}>{{ f.nombre }}{% if f.id == fase_id %} (donde abandonó){% endif %}</option>{% endfor %}
+    </select>
+    <div class="acciones">
+      <button type="submit" class="primario-corto">Sí, reactivar</button>
+      <a href="{{ url_for('ficha.ver', postulante_id=postulante.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

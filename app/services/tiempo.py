@@ -17,3 +17,12 @@ def duracion(segundos) -> str:
     if minutos < 60:
         return f"{minutos} min"
     return f"{minutos // 60} h {minutos % 60:02d} min"
+
+
+def fecha_hora_local(momento) -> str:
+    return momento.astimezone(ZONA).strftime("%d-%m-%Y %H:%M") if momento else ""
+
+
+def fecha_hora_corta(momento) -> str:
+    """Sin año: dentro de un proceso de matrícula, el año es evidente."""
+    return momento.astimezone(ZONA).strftime("%d-%m %H:%M") if momento else ""
