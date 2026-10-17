@@ -54,4 +54,5 @@ class Config:
 class TestConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
+    DATABASE_NAME = os.getenv("TEST_DATABASE_NAME", "workflow_test")
     SMTP_HOST = ""

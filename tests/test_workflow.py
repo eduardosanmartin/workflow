@@ -365,6 +365,13 @@ class TestFlujoAlternativo:
         rec.derivar_a_flujo(EFECTIVO, FIN, "beto", minutos(5))
         assert rec.ruta[1].estado == DERIVADA
 
+    def test_flujo_inactivo_no_admite_entradas(self, est):
+        inactivo = FlujoAlternativo(11, "Crédito externo", (FIN, FIR), activo=False)
+        estructura = Estructura(est.fases, est.flujos + [inactivo])
+        rec = Recorrido.iniciar_por_staff(estructura, "ana", T0)
+        with pytest.raises(ReglaVioladaError):
+            rec.derivar_a_flujo(11, FIN, "beto", minutos(1))
+
     def test_fase_de_entrada_debe_ser_del_flujo(self, est):
         rec = Recorrido.iniciar_por_staff(est, "ana", T0)
         with pytest.raises(ReglaVioladaError):

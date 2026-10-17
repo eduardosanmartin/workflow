@@ -68,6 +68,7 @@ class FlujoAlternativo:
     id: int
     nombre: str
     fases: tuple  # ids de fase en orden; la última es la fase final manual
+    activo: bool = True  # inactivo: no admite nuevas entradas, pero conserva sus expedientes
 
     @property
     def fase_final_id(self):
@@ -177,6 +178,7 @@ class Atencion:
     observacion: str = None
     detalle_cierre: str = None
     sin_tiempo_atencion: bool = False
+    version: int = None  # bloqueo optimista (RNF-06); lo asigna la capa de datos
 
 
 def tiempo_espera(atencion: Atencion):
@@ -230,7 +232,7 @@ class Recorrido:
             raise ReglaVioladaError("Tema de duda no disponible en el formulario", 400)
         iniciado = Atencion(estructura.inicial.id, EN_ESPERA, en_espera_desde=ahora)
         rec = cls(estructura, [iniciado])
-        rec._planificar_principal(consultas, "PUBLICO")
+        rec._planificar_principal(consultas, None)
         return rec
 
     # ── Consultas ──
@@ -488,6 +490,8 @@ class Recorrido:
 
     def _entrar_a_flujo(self, flujo_id, fase_entrada_id, usuario, ahora):
         flujo = self.estructura.flujo(flujo_id)
+        if not flujo.activo:
+            raise ReglaVioladaError(f"El flujo alternativo «{flujo.nombre}» no está activo")
         if fase_entrada_id is None:
             fase_entrada_id = flujo.fases[0]
         if fase_entrada_id not in flujo.fases:
