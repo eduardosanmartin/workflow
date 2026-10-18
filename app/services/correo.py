@@ -4,10 +4,16 @@ Un envío nunca hace fallar la operación que lo originó: se intenta después d
 transacción y queda registrado en `envio_correo` con estado ENVIADO o ERROR, y en la
 auditoría. Sin SMTP configurado el envío queda con el error "SMTP no configurado" (en
 desarrollo, el contenido se escribe en el log).
+
+Los envíos automáticos (inicio, matrícula y reenvío por QR) se hacen en segundo plano, para
+no hacer esperar al usuario mientras responde el servidor de correo (RNF-04). El reenvío
+manual de la ficha espera el resultado, porque el staff necesita saber si llegó.
 """
 
+import atexit
 import smtplib
 import ssl
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from email.message import EmailMessage
 from email.utils import formataddr
@@ -16,6 +22,7 @@ from flask import current_app, render_template
 from peewee import JOIN
 
 from app import models as m
+from app.db import db
 from app.services import auditoria, seguimiento, tiempo
 from app.services import workflow as wf
 from app.services.postulantes import enmascarar_correo
@@ -35,6 +42,40 @@ _TIMEOUT_SMTP = 5
 
 class _SinSmtp(Exception):
     pass
+
+
+# ── Segundo plano ───────────────────────────────────────────────────
+
+_ejecutor = None
+
+
+def _ejecutor_compartido() -> ThreadPoolExecutor:
+    """Uno por proceso (cada worker de Gunicorn tiene el suyo). Al terminar el proceso se
+    esperan los envíos pendientes."""
+    global _ejecutor
+    if _ejecutor is None:
+        _ejecutor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="correo")
+        atexit.register(_ejecutor.shutdown, wait=True)
+    return _ejecutor
+
+
+def _en_segundo_plano(funcion, *args, **kwargs):
+    """Ejecuta `funcion` en otro hilo con su propio contexto y conexión a la base de datos.
+    Con CORREO_EN_SEGUNDO_PLANO desactivado (pruebas), la ejecuta de inmediato."""
+    app = current_app._get_current_object()
+    if not app.config.get("CORREO_EN_SEGUNDO_PLANO"):
+        return funcion(*args, **kwargs)
+
+    def tarea():
+        with app.app_context():
+            try:
+                with db.connection_context():
+                    funcion(*args, **kwargs)
+            except Exception:  # noqa: BLE001 — un hilo sin capturar perdería el error en silencio
+                app.logger.exception("Falló un envío de correo en segundo plano")
+
+    _ejecutor_compartido().submit(tarea)
+    return None
 
 
 # ── Contenido ───────────────────────────────────────────────────────
@@ -108,10 +149,14 @@ def enviar(expediente, tipo, usuario=None, actor=None, ahora=None):
 
 
 def enviar_inicio(expediente, ahora=None):
-    return enviar(expediente, INICIO, actor="SISTEMA", ahora=ahora)
+    return _en_segundo_plano(enviar, expediente, INICIO, actor="SISTEMA", ahora=ahora)
 
 
 def enviar_matricula(expediente):
+    return _en_segundo_plano(_enviar_matricula, expediente)
+
+
+def _enviar_matricula(expediente):
     """Una única vez por expediente: si se reabre y se vuelve a completar, no se reenvía (RF-21)."""
     ya_enviado = (m.EnvioCorreo.select()
                   .where((m.EnvioCorreo.expediente == expediente.id) & (m.EnvioCorreo.tipo == MATRICULADO))
@@ -154,7 +199,7 @@ def reenviar_qr(expediente, ahora=None):
     if _reenvios_recientes(expediente, ahora) >= LIMITE_REENVIOS:
         auditoria.registrar("REENVIO_QR_LIMITADO", "expediente", expediente.id, actor="PUBLICO")
         return None
-    return enviar(expediente, REENVIO_QR, actor="PUBLICO", ahora=ahora)
+    return _en_segundo_plano(enviar, expediente, REENVIO_QR, actor="PUBLICO", ahora=ahora)
 
 
 # ── Historial para la ficha ─────────────────────────────────────────

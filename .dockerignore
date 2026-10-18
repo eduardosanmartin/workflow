@@ -6,3 +6,7 @@ __pycache__
 .coverage
 htmlcov
 docs
+instance
+tests
+.env.*
+!.env.example

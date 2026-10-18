@@ -35,6 +35,12 @@ class Config:
     SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Matrícula UNACH")
     SMTP_USE_TLS = _bool("SMTP_USE_TLS", True)
     CONTACTO_MATRICULA = os.getenv("CONTACTO_MATRICULA", "")
+    # RNF-04: los correos automáticos se envían en otro hilo, sin hacer esperar al usuario
+    CORREO_EN_SEGUNDO_PLANO = _bool("CORREO_EN_SEGUNDO_PLANO", True)
+
+    # Proxies inversos delante de la aplicación (Caddy = 1). Con 0 se ignoran las cabeceras
+    # X-Forwarded-*, que un cliente podría falsificar para ocultar su IP.
+    PROXIES_CONFIABLES = int(os.getenv("PROXIES_CONFIABLES") or 0)
 
     # RF-10: CAPTCHA del formulario QR (Cloudflare Turnstile). Vacíos: desactivado.
     TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "")
@@ -63,6 +69,8 @@ class TestConfig(Config):
     BCRYPT_ROUNDS = 4  # pruebas rápidas; producción usa 12
     DATABASE_NAME = os.getenv("TEST_DATABASE_NAME", "workflow_test")
     SMTP_HOST = ""
+    CORREO_EN_SEGUNDO_PLANO = False  # cada prueba corre en una transacción que otro hilo no vería
+    PROXIES_CONFIABLES = 0
     TURNSTILE_SITE_KEY = ""
     TURNSTILE_SECRET_KEY = ""
     SUPERADMIN_EMAIL = ""

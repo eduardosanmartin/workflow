@@ -2,6 +2,7 @@ import logging
 
 from flask import Flask, g, render_template
 from peewee import OperationalError
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app import db
 from app.config import Config
@@ -13,6 +14,10 @@ log = logging.getLogger(__name__)
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    if app.config["PROXIES_CONFIABLES"]:
+        # Detrás de Caddy: IP real del cliente (auditoría, límites de intentos) y esquema https
+        saltos = app.config["PROXIES_CONFIABLES"]
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=saltos, x_proto=saltos, x_host=saltos)
     db.init_app(app, config_class)
     csrf.init_app(app)
     limiter.init_app(app)

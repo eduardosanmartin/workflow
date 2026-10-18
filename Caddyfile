@@ -1,0 +1,16 @@
+# Proxy inverso con HTTPS automático (Let's Encrypt). DOMINIO viene del .env.
+# Al cambiar el dominio: editar DOMINIO y APP_BASE_URL en el .env, reiniciar y reimprimir el póster del QR.
+{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy web:5001
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+	log {
+		output stdout
+	}
+}

@@ -13,5 +13,10 @@ RUN if [ "$INSTALAR_DEV" = "true" ]; then pip install -r requirements-dev.txt; \
 
 COPY . .
 
+# Sin privilegios de root; instance/ guarda las cargas masivas pendientes (temporales)
+RUN useradd --create-home --uid 1000 app && mkdir -p /app/instance && chown -R app:app /app/instance
+USER app
+
 EXPOSE 5001
-CMD ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:5001", "app:create_app()"]
+# 3 workers (RNF-04). Timeout amplio para cargas masivas y exportaciones grandes.
+CMD ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:5001", "--timeout", "120",      "--access-logfile", "-", "app:create_app()"]
