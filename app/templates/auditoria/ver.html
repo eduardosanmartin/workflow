@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block titulo %}Auditoría{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <h1>Auditoría</h1>
+  <div class="acciones-fila">
+    <a class="boton secundario" href="{{ url_for('auditoria.exportar') }}?{{ consulta(formato='xlsx') }}">Descargar Excel</a>
+    <a class="boton secundario" href="{{ url_for('auditoria.exportar') }}?{{ consulta(formato='csv') }}">Descargar CSV</a>
+  </div>
+</div>
+<p class="nota sin-margen">
+  {% if g.usuario.rol == 'ADMIN' %}Todas las acciones del sistema.{% else %}Solo lectura: acciones sobre expedientes, postulantes y cargas masivas.{% endif %}
+  Los registros no se pueden modificar ni eliminar.
+</p>
+
+{% for error in filtros.errores %}
+<div class="mensaje mensaje-error" role="alert"><span class="icono" aria-hidden="true">✖</span><span>{{ error }}</span></div>
+{% endfor %}
+
+<form method="get" class="tarjeta filtros separada" aria-label="Filtros de la auditoría">
+  <div>
+    <label for="desde">Desde</label>
+    <input id="desde" name="desde" type="date" value="{{ filtros.desde or '' }}">
+  </div>
+  <div>
+    <label for="hasta">Hasta</label>
+    <input id="hasta" name="hasta" type="date" value="{{ filtros.hasta or '' }}">
+  </div>
+  <div>
+    <label for="usuario">Usuario</label>
+    <select id="usuario" name="usuario">
+      <option value="">Todos</option>
+      {% for valor, texto in ACTORES.items() %}<option value="{{ valor }}" {% if filtros.usuario == valor %}selected{% endif %}>{{ texto }}</option>{% endfor %}
+      {% for u in usuarios %}<option value="{{ u.id }}" {% if filtros.usuario == u.id|string %}selected{% endif %}>{{ u.nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="accion">Acción</label>
+    <select id="accion" name="accion">
+      <option value="">Todas</option>
+      {% for valor, texto in acciones %}<option value="{{ valor }}" {% if filtros.accion == valor %}selected{% endif %}>{{ texto }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="entidad">Entidad</label>
+    <select id="entidad" name="entidad">
+      <option value="">Todas</option>
+      {% for valor, texto in entidades %}<option value="{{ valor }}" {% if filtros.entidad == valor %}selected{% endif %}>{{ texto }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="entidad_id">Id de la entidad</label>
+    <input id="entidad_id" name="entidad_id" type="text" inputmode="numeric" value="{{ filtros.entidad_id or '' }}">
+  </div>
+  <div class="acciones">
+    <button type="submit" class="secundario">Filtrar</button>
+    {% if filtros.activos %}<a href="{{ url_for('auditoria.ver') }}">Quitar filtros</a>{% endif %}
+  </div>
+</form>
+
+<h2 class="separada">{{ resultado.total }} registro{{ 's' if resultado.total != 1 }}{% if resultado.paginas > 1 %}
+  <small>· página {{ resultado.pagina }} de {{ resultado.paginas }}</small>{% endif %}</h2>
+
+{% if resultado.filas %}
+<div class="tabla-desplazable">
+<table class="tabla-apilable">
+  <thead><tr><th scope="col">Fecha</th><th scope="col">Usuario</th><th scope="col">Acción</th><th scope="col">Entidad</th><th scope="col">Detalle</th></tr></thead>
+  <tbody>
+  {% for fila in resultado.filas %}
+  <tr>
+    <td class="sin-corte">{{ fila.fecha }}</td>
+    <td data-etiqueta="Usuario">{{ fila.quien }}{% if fila.rol %}<br><small>{{ NOMBRE_ROL.get(fila.rol, fila.rol) }}</small>{% endif %}</td>
+    <td data-etiqueta="Acción">{{ fila.accion }}</td>
+    <td data-etiqueta="Entidad" class="sin-corte">
+      {{ fila.entidad }}{% if fila.entidad_id %} #{{ fila.entidad_id }}{% endif %}
+      {% if fila.ficha %}<br><a href="{{ url_for('ficha.ver', postulante_id=fila.ficha) }}">Ver ficha</a>{% endif %}
+    </td>
+    <td data-etiqueta="Detalle">
+      <details>
+        <summary>{{ fila.campos|length }} campo{{ 's' if fila.campos|length != 1 }}{% set cambios = fila.campos|selectattr('cambio')|list %}{% if cambios %} · {{ cambios|length }} cambiado{{ 's' if cambios|length != 1 }}{% endif %}</summary>
+        {% if fila.campos %}
+        <table class="detalle-auditoria">
+          <thead><tr><th scope="col">Campo</th><th scope="col">Antes</th><th scope="col">Después</th></tr></thead>
+          <tbody>
+          {% for c in fila.campos %}
+          <tr class="{{ 'cambiado' if c.cambio }}"><td>{{ c.campo }}{% if c.cambio %} <span aria-label="cambió">●</span>{% endif %}</td><td data-etiqueta="Antes">{{ c.anterior }}</td><td data-etiqueta="Después">{{ c.nuevo }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+        <p class="nota sin-margen">IP: {{ fila.ip or '—' }}{% if fila.user_agent %} · {{ fila.user_agent }}{% endif %}</p>
+      </details>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if resultado.paginas > 1 %}
+<nav class="paginacion separada" aria-label="Páginas">
+  {% if resultado.pagina > 1 %}<a href="?{{ consulta(pagina=resultado.pagina - 1) }}">← Anteriores</a>{% endif %}
+  <span>Página {{ resultado.pagina }} de {{ resultado.paginas }}</span>
+  {% if resultado.pagina < resultado.paginas %}<a href="?{{ consulta(pagina=resultado.pagina + 1) }}">Siguientes →</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<p class="tarjeta nota">No hay registros para los filtros elegidos.</p>
+{% endif %}
+{% endblock %}

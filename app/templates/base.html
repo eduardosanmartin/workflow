@@ -18,6 +18,7 @@
       {% if puede_registrar() %}<a href="{{ url_for('postulantes.nuevo') }}">Registrar postulante</a>{% endif %}
       {% if puede_editar_postulantes() %}<a href="{{ url_for('postulantes.carga') }}">Carga masiva</a>{% endif %}
       {% if puede_ver_reportes() %}<a href="{{ url_for('reportes.indice') }}">Reportes</a>{% endif %}
+      {% if puede_ver_reportes() %}<a href="{{ url_for('auditoria.ver') }}">Auditoría</a>{% endif %}
       {% if g.usuario.rol == 'ADMIN' %}
       <a href="{{ url_for('admin.procesos') }}">Procesos</a>
       <a href="{{ url_for('admin.usuarios') }}">Usuarios</a>
