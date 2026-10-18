@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definiciones_InicioStaff" targetNamespace="http://unach.cl/workflow-matricula" exporter="Sistema WorkFlow Matrícula" exporterVersion="1.0">
+  <bpmn:collaboration id="Colaboracion_InicioStaff">
+    <bpmn:participant id="Pool_InicioStaff" name="Inicio por staff" processRef="Proceso_InicioStaff" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proceso_InicioStaff" name="Inicio de proceso por staff" isExecutable="false">
+    <bpmn:documentation>RF-09 y RF-11. Lo hacen los responsables de «Iniciado», el Gestor o el Administrador. No requiere el permiso de carga manual.</bpmn:documentation>
+    <bpmn:laneSet id="Carriles_InicioStaff">
+      <bpmn:lane id="L_Ini" name="Responsable de Iniciado">
+        <bpmn:flowNodeRef>I_Staff</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Rut</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Exp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Exp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Reg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Revisar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Nuevo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Datos</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Dudas</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Directa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Consultas</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Flujo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Ruta</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Indicar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Staff</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_Sis" name="Sistema">
+        <bpmn:flowNodeRef>T_Crear</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="I_Staff" name="Postulante en el módulo de inicio">
+      <bpmn:outgoing>F_I_Staff_T_Rut</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="T_Rut" name="Ingresar el RUT">
+      <bpmn:incoming>F_I_Staff_T_Rut</bpmn:incoming>
+      <bpmn:outgoing>F_T_Rut_G_Exp</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="G_Exp" name="¿Ya tiene expediente?">
+      <bpmn:incoming>F_T_Rut_G_Exp</bpmn:incoming>
+      <bpmn:outgoing>F_G_Exp_F_Exp</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Exp_G_Reg</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="F_Exp" name="Muestra su expediente (puede reenviar el enlace)">
+      <bpmn:incoming>F_G_Exp_F_Exp</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="G_Reg" name="¿RUT registrado?">
+      <bpmn:incoming>F_G_Exp_G_Reg</bpmn:incoming>
+      <bpmn:outgoing>F_G_Reg_T_Revisar</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Reg_T_Nuevo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="T_Revisar" name="Revisar y corregir sus datos (excepto el RUT)">
+      <bpmn:incoming>F_G_Reg_T_Revisar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Revisar_M_Datos</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T_Nuevo" name="Completar los datos del postulante">
+      <bpmn:incoming>F_G_Reg_T_Nuevo</bpmn:incoming>
+      <bpmn:outgoing>F_T_Nuevo_M_Datos</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="M_Datos" name="">
+      <bpmn:incoming>F_T_Revisar_M_Datos</bpmn:incoming>
+      <bpmn:incoming>F_T_Nuevo_M_Datos</bpmn:incoming>
+      <bpmn:outgoing>F_M_Datos_G_Dudas</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="G_Dudas" name="¿El postulante tiene dudas?">
+      <bpmn:incoming>F_M_Datos_G_Dudas</bpmn:incoming>
+      <bpmn:outgoing>F_G_Dudas_T_Directa</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Dudas_T_Consultas</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Dudas_T_Flujo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="T_Directa" name="Ruta directa: Iniciado → MNP">
+      <bpmn:incoming>F_G_Dudas_T_Directa</bpmn:incoming>
+      <bpmn:outgoing>F_T_Directa_M_Ruta</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:userTask id="T_Consultas" name="Numerar las fases de consulta en orden (MNP al final)">
+      <bpmn:incoming>F_G_Dudas_T_Consultas</bpmn:incoming>
+      <bpmn:outgoing>F_T_Consultas_M_Ruta</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T_Flujo" name="Elegir flujo alternativo y fase de entrada">
+      <bpmn:incoming>F_G_Dudas_T_Flujo</bpmn:incoming>
+      <bpmn:outgoing>F_T_Flujo_M_Ruta</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="M_Ruta" name="">
+      <bpmn:incoming>F_T_Directa_M_Ruta</bpmn:incoming>
+      <bpmn:incoming>F_T_Consultas_M_Ruta</bpmn:incoming>
+      <bpmn:incoming>F_T_Flujo_M_Ruta</bpmn:incoming>
+      <bpmn:outgoing>F_M_Ruta_T_Crear</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="T_Crear" name="Crear expediente, asignar número, enviar correo y activar la primera fase">
+      <bpmn:incoming>F_M_Ruta_T_Crear</bpmn:incoming>
+      <bpmn:outgoing>F_T_Crear_T_Indicar</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="T_Indicar" name="Indicarle su número y a qué fase dirigirse">
+      <bpmn:incoming>F_T_Crear_T_Indicar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Indicar_F_Staff</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="F_Staff" name="Postulante derivado a su primera fase">
+      <bpmn:incoming>F_T_Indicar_F_Staff</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_I_Staff_T_Rut" sourceRef="I_Staff" targetRef="T_Rut" />
+    <bpmn:sequenceFlow id="F_T_Rut_G_Exp" sourceRef="T_Rut" targetRef="G_Exp" />
+    <bpmn:sequenceFlow id="F_G_Exp_F_Exp" name="Sí" sourceRef="G_Exp" targetRef="F_Exp" />
+    <bpmn:sequenceFlow id="F_G_Exp_G_Reg" name="No" sourceRef="G_Exp" targetRef="G_Reg" />
+    <bpmn:sequenceFlow id="F_G_Reg_T_Revisar" name="Sí" sourceRef="G_Reg" targetRef="T_Revisar" />
+    <bpmn:sequenceFlow id="F_G_Reg_T_Nuevo" name="No" sourceRef="G_Reg" targetRef="T_Nuevo" />
+    <bpmn:sequenceFlow id="F_T_Revisar_M_Datos" sourceRef="T_Revisar" targetRef="M_Datos" />
+    <bpmn:sequenceFlow id="F_T_Nuevo_M_Datos" sourceRef="T_Nuevo" targetRef="M_Datos" />
+    <bpmn:sequenceFlow id="F_M_Datos_G_Dudas" sourceRef="M_Datos" targetRef="G_Dudas" />
+    <bpmn:sequenceFlow id="F_G_Dudas_T_Directa" name="No" sourceRef="G_Dudas" targetRef="T_Directa" />
+    <bpmn:sequenceFlow id="F_G_Dudas_T_Consultas" name="Sí" sourceRef="G_Dudas" targetRef="T_Consultas" />
+    <bpmn:sequenceFlow id="F_G_Dudas_T_Flujo" name="No termina en MNP" sourceRef="G_Dudas" targetRef="T_Flujo" />
+    <bpmn:sequenceFlow id="F_T_Directa_M_Ruta" sourceRef="T_Directa" targetRef="M_Ruta" />
+    <bpmn:sequenceFlow id="F_T_Consultas_M_Ruta" sourceRef="T_Consultas" targetRef="M_Ruta" />
+    <bpmn:sequenceFlow id="F_T_Flujo_M_Ruta" sourceRef="T_Flujo" targetRef="M_Ruta" />
+    <bpmn:sequenceFlow id="F_M_Ruta_T_Crear" sourceRef="M_Ruta" targetRef="T_Crear" />
+    <bpmn:sequenceFlow id="F_T_Crear_T_Indicar" sourceRef="T_Crear" targetRef="T_Indicar" />
+    <bpmn:sequenceFlow id="F_T_Indicar_F_Staff" sourceRef="T_Indicar" targetRef="F_Staff" />
+    <bpmn:textAnnotation id="N_Dudas"><bpmn:text>No se puede confirmar sin responder «¿Tiene dudas?».</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagrama_InicioStaff">
+    <bpmndi:BPMNPlane id="Plano_InicioStaff" bpmnElement="Colaboracion_InicioStaff">
+      <bpmndi:BPMNShape id="Pool_InicioStaff_di" bpmnElement="Pool_InicioStaff" isHorizontal="true">
+        <dc:Bounds x="120" y="80" width="2270" height="520" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Ini_di" bpmnElement="L_Ini" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="2240" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Sis_di" bpmnElement="L_Sis" isHorizontal="true">
+        <dc:Bounds x="150" y="460" width="2240" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="I_Staff_di" bpmnElement="I_Staff">
+        <dc:Bounds x="262" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="225" y="292" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Rut_di" bpmnElement="T_Rut">
+        <dc:Bounds x="390" y="230" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Exp_di" bpmnElement="G_Exp" isMarkerVisible="true">
+        <dc:Bounds x="605" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="575" y="299" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Exp_di" bpmnElement="F_Exp">
+        <dc:Bounds x="612" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="575" y="92" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Reg_di" bpmnElement="G_Reg" isMarkerVisible="true">
+        <dc:Bounds x="780" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="750" y="299" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Revisar_di" bpmnElement="T_Revisar">
+        <dc:Bounds x="915" y="110" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Nuevo_di" bpmnElement="T_Nuevo">
+        <dc:Bounds x="915" y="230" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Datos_di" bpmnElement="M_Datos" isMarkerVisible="true">
+        <dc:Bounds x="1130" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1100" y="299" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Dudas_di" bpmnElement="G_Dudas" isMarkerVisible="true">
+        <dc:Bounds x="1305" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1275" y="299" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Directa_di" bpmnElement="T_Directa">
+        <dc:Bounds x="1440" y="110" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Consultas_di" bpmnElement="T_Consultas">
+        <dc:Bounds x="1440" y="230" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Flujo_di" bpmnElement="T_Flujo">
+        <dc:Bounds x="1440" y="350" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ruta_di" bpmnElement="M_Ruta" isMarkerVisible="true">
+        <dc:Bounds x="1655" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1625" y="299" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Crear_di" bpmnElement="T_Crear">
+        <dc:Bounds x="1790" y="490" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Indicar_di" bpmnElement="T_Indicar">
+        <dc:Bounds x="1965" y="230" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Staff_di" bpmnElement="F_Staff">
+        <dc:Bounds x="2187" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="2150" y="292" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F_I_Staff_T_Rut_di" bpmnElement="F_I_Staff_T_Rut">
+        <di:waypoint x="298" y="270" />
+        <di:waypoint x="390" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Rut_G_Exp_di" bpmnElement="F_T_Rut_G_Exp">
+        <di:waypoint x="520" y="270" />
+        <di:waypoint x="605" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Exp_F_Exp_di" bpmnElement="F_G_Exp_F_Exp">
+        <di:waypoint x="630" y="245" />
+        <di:waypoint x="630" y="168" />
+        <bpmndi:BPMNLabel><dc:Bounds x="636" y="200" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Exp_G_Reg_di" bpmnElement="F_G_Exp_G_Reg">
+        <di:waypoint x="655" y="270" />
+        <di:waypoint x="780" y="270" />
+        <bpmndi:BPMNLabel><dc:Bounds x="688" y="252" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Reg_T_Revisar_di" bpmnElement="F_G_Reg_T_Revisar">
+        <di:waypoint x="805" y="245" />
+        <di:waypoint x="805" y="150" />
+        <di:waypoint x="915" y="150" />
+        <bpmndi:BPMNLabel><dc:Bounds x="830" y="132" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Reg_T_Nuevo_di" bpmnElement="F_G_Reg_T_Nuevo">
+        <di:waypoint x="830" y="270" />
+        <di:waypoint x="915" y="270" />
+        <bpmndi:BPMNLabel><dc:Bounds x="842" y="252" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Revisar_M_Datos_di" bpmnElement="F_T_Revisar_M_Datos">
+        <di:waypoint x="1045" y="150" />
+        <di:waypoint x="1155" y="150" />
+        <di:waypoint x="1155" y="245" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Nuevo_M_Datos_di" bpmnElement="F_T_Nuevo_M_Datos">
+        <di:waypoint x="1045" y="270" />
+        <di:waypoint x="1130" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_M_Datos_G_Dudas_di" bpmnElement="F_M_Datos_G_Dudas">
+        <di:waypoint x="1180" y="270" />
+        <di:waypoint x="1305" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Dudas_T_Directa_di" bpmnElement="F_G_Dudas_T_Directa">
+        <di:waypoint x="1330" y="245" />
+        <di:waypoint x="1330" y="150" />
+        <di:waypoint x="1440" y="150" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1355" y="132" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Dudas_T_Consultas_di" bpmnElement="F_G_Dudas_T_Consultas">
+        <di:waypoint x="1355" y="270" />
+        <di:waypoint x="1440" y="270" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1368" y="252" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Dudas_T_Flujo_di" bpmnElement="F_G_Dudas_T_Flujo">
+        <di:waypoint x="1330" y="295" />
+        <di:waypoint x="1330" y="390" />
+        <di:waypoint x="1440" y="390" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1328" y="372" width="115" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Directa_M_Ruta_di" bpmnElement="F_T_Directa_M_Ruta">
+        <di:waypoint x="1570" y="150" />
+        <di:waypoint x="1680" y="150" />
+        <di:waypoint x="1680" y="245" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Consultas_M_Ruta_di" bpmnElement="F_T_Consultas_M_Ruta">
+        <di:waypoint x="1570" y="270" />
+        <di:waypoint x="1655" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Flujo_M_Ruta_di" bpmnElement="F_T_Flujo_M_Ruta">
+        <di:waypoint x="1570" y="390" />
+        <di:waypoint x="1680" y="390" />
+        <di:waypoint x="1680" y="295" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_M_Ruta_T_Crear_di" bpmnElement="F_M_Ruta_T_Crear">
+        <di:waypoint x="1705" y="270" />
+        <di:waypoint x="1735" y="270" />
+        <di:waypoint x="1735" y="530" />
+        <di:waypoint x="1790" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Crear_T_Indicar_di" bpmnElement="F_T_Crear_T_Indicar">
+        <di:waypoint x="1920" y="530" />
+        <di:waypoint x="1942" y="530" />
+        <di:waypoint x="1942" y="270" />
+        <di:waypoint x="1965" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Indicar_F_Staff_di" bpmnElement="F_T_Indicar_F_Staff">
+        <di:waypoint x="2095" y="270" />
+        <di:waypoint x="2187" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="N_Dudas_di" bpmnElement="N_Dudas">
+        <dc:Bounds x="1040" y="370" width="230" height="40" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

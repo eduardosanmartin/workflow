@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definiciones_Atencion" targetNamespace="http://unach.cl/workflow-matricula" exporter="Sistema WorkFlow Matrícula" exporterVersion="1.0">
+  <bpmn:collaboration id="Colaboracion_Atencion">
+    <bpmn:participant id="Pool_Atencion" name="Atención en una fase" processRef="Proceso_Atencion" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proceso_Atencion" name="Atención en una fase (consulta o MNP)" isExecutable="false">
+    <bpmn:documentation>RF-13, RF-14, RF-17, RF-27 y RF-28. Solo actúan los responsables de la fase actual (o el Gestor y el Administrador).</bpmn:documentation>
+    <bpmn:laneSet id="Carriles_Atencion">
+      <bpmn:lane id="L_Post" name="Postulante">
+        <bpmn:flowNodeRef>T_Dirigete</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_Resp" name="Responsable de la fase">
+        <bpmn:flowNodeRef>G_Presente</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Atender</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Finalizar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Sigue</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Flujo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Abandono</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Reactivar</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_Sis" name="Sistema">
+        <bpmn:flowNodeRef>Inicio</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Bandeja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Bandeja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Siguiente</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Siguiente</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Siguiente</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Interrumpir</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Matricula</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Matriculado</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Pausa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Vuelve</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E_Vuelve</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>E_Cierre</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Pendiente</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Inicio" name="Postulante en espera en la fase">
+      <bpmn:outgoing>F_Inicio_M_Bandeja</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="M_Bandeja" name="">
+      <bpmn:incoming>F_Inicio_M_Bandeja</bpmn:incoming>
+      <bpmn:incoming>F_T_Reactivar_M_Bandeja</bpmn:incoming>
+      <bpmn:outgoing>F_M_Bandeja_T_Bandeja</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="T_Bandeja" name="Mostrarlo en la bandeja, por orden de llegada">
+      <bpmn:incoming>F_M_Bandeja_T_Bandeja</bpmn:incoming>
+      <bpmn:outgoing>F_T_Bandeja_T_Dirigete</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:task id="T_Dirigete" name="Ve «Dirígete a: &lt;fase&gt;» y acude">
+      <bpmn:incoming>F_T_Bandeja_T_Dirigete</bpmn:incoming>
+      <bpmn:outgoing>F_T_Dirigete_G_Presente</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="G_Presente" name="¿Se presenta?">
+      <bpmn:incoming>F_T_Dirigete_G_Presente</bpmn:incoming>
+      <bpmn:outgoing>F_G_Presente_T_Atender</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Presente_T_Abandono</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="T_Atender" name="Atender (registra el inicio de la atención)">
+      <bpmn:incoming>F_G_Presente_T_Atender</bpmn:incoming>
+      <bpmn:outgoing>F_T_Atender_T_Finalizar</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T_Finalizar" name="Finalizar: completado o con observaciones">
+      <bpmn:incoming>F_T_Atender_T_Finalizar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Finalizar_G_Sigue</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="G_Sigue" name="¿Cómo sigue?">
+      <bpmn:incoming>F_T_Finalizar_G_Sigue</bpmn:incoming>
+      <bpmn:outgoing>F_G_Sigue_F_Flujo</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Sigue_M_Siguiente</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Sigue_T_Interrumpir</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Sigue_T_Matricula</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="F_Flujo" name="Entra al flujo alternativo (diagrama 05)">
+      <bpmn:incoming>F_G_Sigue_F_Flujo</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="M_Siguiente" name="">
+      <bpmn:incoming>F_G_Sigue_M_Siguiente</bpmn:incoming>
+      <bpmn:incoming>F_T_Interrumpir_M_Siguiente</bpmn:incoming>
+      <bpmn:outgoing>F_M_Siguiente_T_Siguiente</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="T_Siguiente" name="Activar la siguiente fase de la ruta (MNP siempre al final)">
+      <bpmn:incoming>F_M_Siguiente_T_Siguiente</bpmn:incoming>
+      <bpmn:outgoing>F_T_Siguiente_F_Siguiente</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="F_Siguiente" name="Pasa a la siguiente fase">
+      <bpmn:incoming>F_T_Siguiente_F_Siguiente</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="T_Interrumpir" name="Marcar la atención DERIVADA y replanificar la fase después">
+      <bpmn:incoming>F_G_Sigue_T_Interrumpir</bpmn:incoming>
+      <bpmn:outgoing>F_T_Interrumpir_M_Siguiente</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="T_Matricula" name="Marcar Matriculado y enviar correo de matrícula">
+      <bpmn:incoming>F_G_Sigue_T_Matricula</bpmn:incoming>
+      <bpmn:outgoing>F_T_Matricula_F_Matriculado</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="F_Matriculado" name="Matriculado">
+      <bpmn:incoming>F_T_Matricula_F_Matriculado</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="T_Abandono" name="Marcar «Abandonó»">
+      <bpmn:incoming>F_G_Presente_T_Abandono</bpmn:incoming>
+      <bpmn:outgoing>F_T_Abandono_T_Pausa</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="T_Pausa" name="Sacarlo de la fila; su seguimiento muestra «en pausa»">
+      <bpmn:incoming>F_T_Abandono_T_Pausa</bpmn:incoming>
+      <bpmn:outgoing>F_T_Pausa_G_Vuelve</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:eventBasedGateway id="G_Vuelve" name="">
+      <bpmn:incoming>F_T_Pausa_G_Vuelve</bpmn:incoming>
+      <bpmn:outgoing>F_G_Vuelve_E_Vuelve</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Vuelve_E_Cierre</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="E_Vuelve" name="Vuelve a la fila">
+      <bpmn:incoming>F_G_Vuelve_E_Vuelve</bpmn:incoming>
+      <bpmn:outgoing>F_E_Vuelve_T_Reactivar</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Mensaje_E_Vuelve" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="T_Reactivar" name="Reactivar desde la ficha (misma fase u otra)">
+      <bpmn:incoming>F_E_Vuelve_T_Reactivar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Reactivar_M_Bandeja</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="E_Cierre" name="Se cierra el proceso">
+      <bpmn:incoming>F_G_Vuelve_E_Cierre</bpmn:incoming>
+      <bpmn:outgoing>F_E_Cierre_F_Pendiente</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="Mensaje_E_Cierre" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="F_Pendiente" name="Proceso pendiente (abandonó)">
+      <bpmn:incoming>F_E_Cierre_F_Pendiente</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_Inicio_M_Bandeja" sourceRef="Inicio" targetRef="M_Bandeja" />
+    <bpmn:sequenceFlow id="F_M_Bandeja_T_Bandeja" sourceRef="M_Bandeja" targetRef="T_Bandeja" />
+    <bpmn:sequenceFlow id="F_T_Bandeja_T_Dirigete" sourceRef="T_Bandeja" targetRef="T_Dirigete" />
+    <bpmn:sequenceFlow id="F_T_Dirigete_G_Presente" sourceRef="T_Dirigete" targetRef="G_Presente" />
+    <bpmn:sequenceFlow id="F_G_Presente_T_Atender" name="Sí" sourceRef="G_Presente" targetRef="T_Atender" />
+    <bpmn:sequenceFlow id="F_G_Presente_T_Abandono" name="No" sourceRef="G_Presente" targetRef="T_Abandono" />
+    <bpmn:sequenceFlow id="F_T_Atender_T_Finalizar" sourceRef="T_Atender" targetRef="T_Finalizar" />
+    <bpmn:sequenceFlow id="F_T_Finalizar_G_Sigue" sourceRef="T_Finalizar" targetRef="G_Sigue" />
+    <bpmn:sequenceFlow id="F_G_Sigue_F_Flujo" name="Derivar a flujo alternativo" sourceRef="G_Sigue" targetRef="F_Flujo" />
+    <bpmn:sequenceFlow id="F_G_Sigue_M_Siguiente" name="Continuar la ruta" sourceRef="G_Sigue" targetRef="M_Siguiente" />
+    <bpmn:sequenceFlow id="F_M_Siguiente_T_Siguiente" sourceRef="M_Siguiente" targetRef="T_Siguiente" />
+    <bpmn:sequenceFlow id="F_G_Sigue_T_Interrumpir" name="Derivar ahora" sourceRef="G_Sigue" targetRef="T_Interrumpir" />
+    <bpmn:sequenceFlow id="F_G_Sigue_T_Matricula" name="Completar matrícula (MNP)" sourceRef="G_Sigue" targetRef="T_Matricula" />
+    <bpmn:sequenceFlow id="F_T_Interrumpir_M_Siguiente" sourceRef="T_Interrumpir" targetRef="M_Siguiente" />
+    <bpmn:sequenceFlow id="F_T_Siguiente_F_Siguiente" sourceRef="T_Siguiente" targetRef="F_Siguiente" />
+    <bpmn:sequenceFlow id="F_T_Matricula_F_Matriculado" sourceRef="T_Matricula" targetRef="F_Matriculado" />
+    <bpmn:sequenceFlow id="F_T_Abandono_T_Pausa" sourceRef="T_Abandono" targetRef="T_Pausa" />
+    <bpmn:sequenceFlow id="F_T_Pausa_G_Vuelve" sourceRef="T_Pausa" targetRef="G_Vuelve" />
+    <bpmn:sequenceFlow id="F_G_Vuelve_E_Vuelve" sourceRef="G_Vuelve" targetRef="E_Vuelve" />
+    <bpmn:sequenceFlow id="F_G_Vuelve_E_Cierre" sourceRef="G_Vuelve" targetRef="E_Cierre" />
+    <bpmn:sequenceFlow id="F_E_Vuelve_T_Reactivar" sourceRef="E_Vuelve" targetRef="T_Reactivar" />
+    <bpmn:sequenceFlow id="F_T_Reactivar_M_Bandeja" sourceRef="T_Reactivar" targetRef="M_Bandeja" />
+    <bpmn:sequenceFlow id="F_E_Cierre_F_Pendiente" sourceRef="E_Cierre" targetRef="F_Pendiente" />
+    <bpmn:textAnnotation id="N_Ruta"><bpmn:text>Al continuar, puede agregar, quitar o reordenar las fases de consulta pendientes.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:textAnnotation id="N_Sin"><bpmn:text>Si finaliza sin presionar «Atender», se confirma y queda «sin tiempo de atención».</bpmn:text></bpmn:textAnnotation>
+    <bpmn:textAnnotation id="N_Gestor"><bpmn:text>El Gestor y el Administrador también pueden corregir la ruta (con motivo) y reabrir la última atención completada si la siguiente no comenzó.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Asoc_N_Ruta" associationDirection="None" sourceRef="G_Sigue" targetRef="N_Ruta" />
+    <bpmn:association id="Asoc_N_Sin" associationDirection="None" sourceRef="T_Finalizar" targetRef="N_Sin" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagrama_Atencion">
+    <bpmndi:BPMNPlane id="Plano_Atencion" bpmnElement="Colaboracion_Atencion">
+      <bpmndi:BPMNShape id="Pool_Atencion_di" bpmnElement="Pool_Atencion" isHorizontal="true">
+        <dc:Bounds x="120" y="80" width="2095" height="780" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Post_di" bpmnElement="L_Post" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="2065" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Resp_di" bpmnElement="L_Resp" isHorizontal="true">
+        <dc:Bounds x="150" y="220" width="2065" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Sis_di" bpmnElement="L_Sis" isHorizontal="true">
+        <dc:Bounds x="150" y="480" width="2065" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inicio_di" bpmnElement="Inicio">
+        <dc:Bounds x="207" y="532" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="170" y="572" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Bandeja_di" bpmnElement="M_Bandeja" isMarkerVisible="true">
+        <dc:Bounds x="310" y="525" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="280" y="579" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Bandeja_di" bpmnElement="T_Bandeja">
+        <dc:Bounds x="390" y="510" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Dirigete_di" bpmnElement="T_Dirigete">
+        <dc:Bounds x="565" y="110" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Presente_di" bpmnElement="G_Presente" isMarkerVisible="true">
+        <dc:Bounds x="780" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="750" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Atender_di" bpmnElement="T_Atender">
+        <dc:Bounds x="915" y="250" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Finalizar_di" bpmnElement="T_Finalizar">
+        <dc:Bounds x="1090" y="250" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Sigue_di" bpmnElement="G_Sigue" isMarkerVisible="true">
+        <dc:Bounds x="1305" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1275" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Flujo_di" bpmnElement="F_Flujo">
+        <dc:Bounds x="1662" y="272" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1625" y="312" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Siguiente_di" bpmnElement="M_Siguiente" isMarkerVisible="true">
+        <dc:Bounds x="1600" y="525" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1570" y="579" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Siguiente_di" bpmnElement="T_Siguiente">
+        <dc:Bounds x="1790" y="510" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Siguiente_di" bpmnElement="F_Siguiente">
+        <dc:Bounds x="2012" y="532" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1975" y="572" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Interrumpir_di" bpmnElement="T_Interrumpir">
+        <dc:Bounds x="1560" y="630" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Matricula_di" bpmnElement="T_Matricula">
+        <dc:Bounds x="1615" y="750" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Matriculado_di" bpmnElement="F_Matriculado">
+        <dc:Bounds x="1837" y="772" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1800" y="812" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Abandono_di" bpmnElement="T_Abandono">
+        <dc:Bounds x="740" y="370" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Pausa_di" bpmnElement="T_Pausa">
+        <dc:Bounds x="740" y="630" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Vuelve_di" bpmnElement="G_Vuelve">
+        <dc:Bounds x="955" y="645" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="925" y="699" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Vuelve_di" bpmnElement="E_Vuelve">
+        <dc:Bounds x="1137" y="652" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1100" y="692" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Reactivar_di" bpmnElement="T_Reactivar">
+        <dc:Bounds x="1090" y="370" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Cierre_di" bpmnElement="E_Cierre">
+        <dc:Bounds x="962" y="772" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="925" y="812" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Pendiente_di" bpmnElement="F_Pendiente">
+        <dc:Bounds x="1137" y="772" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1100" y="812" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F_Inicio_M_Bandeja_di" bpmnElement="F_Inicio_M_Bandeja">
+        <di:waypoint x="243" y="550" />
+        <di:waypoint x="310" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_M_Bandeja_T_Bandeja_di" bpmnElement="F_M_Bandeja_T_Bandeja">
+        <di:waypoint x="360" y="550" />
+        <di:waypoint x="390" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Bandeja_T_Dirigete_di" bpmnElement="F_T_Bandeja_T_Dirigete">
+        <di:waypoint x="520" y="550" />
+        <di:waypoint x="542" y="550" />
+        <di:waypoint x="542" y="150" />
+        <di:waypoint x="565" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Dirigete_G_Presente_di" bpmnElement="F_T_Dirigete_G_Presente">
+        <di:waypoint x="695" y="150" />
+        <di:waypoint x="738" y="150" />
+        <di:waypoint x="738" y="290" />
+        <di:waypoint x="780" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Presente_T_Atender_di" bpmnElement="F_G_Presente_T_Atender">
+        <di:waypoint x="830" y="290" />
+        <di:waypoint x="915" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="842" y="272" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Presente_T_Abandono_di" bpmnElement="F_G_Presente_T_Abandono">
+        <di:waypoint x="805" y="315" />
+        <di:waypoint x="805" y="370" />
+        <bpmndi:BPMNLabel><dc:Bounds x="811" y="336" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Atender_T_Finalizar_di" bpmnElement="F_T_Atender_T_Finalizar">
+        <di:waypoint x="1045" y="290" />
+        <di:waypoint x="1090" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Finalizar_G_Sigue_di" bpmnElement="F_T_Finalizar_G_Sigue">
+        <di:waypoint x="1220" y="290" />
+        <di:waypoint x="1305" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Sigue_F_Flujo_di" bpmnElement="F_G_Sigue_F_Flujo">
+        <di:waypoint x="1355" y="290" />
+        <di:waypoint x="1662" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1417" y="272" width="183" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Sigue_M_Siguiente_di" bpmnElement="F_G_Sigue_M_Siguiente">
+        <di:waypoint x="1355" y="290" />
+        <di:waypoint x="1478" y="290" />
+        <di:waypoint x="1478" y="550" />
+        <di:waypoint x="1600" y="550" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1484" y="413" width="115" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_M_Siguiente_T_Siguiente_di" bpmnElement="F_M_Siguiente_T_Siguiente">
+        <di:waypoint x="1650" y="550" />
+        <di:waypoint x="1790" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Sigue_T_Interrumpir_di" bpmnElement="F_G_Sigue_T_Interrumpir">
+        <di:waypoint x="1355" y="290" />
+        <di:waypoint x="1385" y="290" />
+        <di:waypoint x="1385" y="670" />
+        <di:waypoint x="1560" y="670" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1391" y="473" width="88" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Sigue_T_Matricula_di" bpmnElement="F_G_Sigue_T_Matricula">
+        <di:waypoint x="1330" y="315" />
+        <di:waypoint x="1330" y="790" />
+        <di:waypoint x="1615" y="790" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1336" y="546" width="170" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Interrumpir_M_Siguiente_di" bpmnElement="F_T_Interrumpir_M_Siguiente">
+        <di:waypoint x="1625" y="630" />
+        <di:waypoint x="1625" y="575" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Siguiente_F_Siguiente_di" bpmnElement="F_T_Siguiente_F_Siguiente">
+        <di:waypoint x="1920" y="550" />
+        <di:waypoint x="2012" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Matricula_F_Matriculado_di" bpmnElement="F_T_Matricula_F_Matriculado">
+        <di:waypoint x="1745" y="790" />
+        <di:waypoint x="1837" y="790" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Abandono_T_Pausa_di" bpmnElement="F_T_Abandono_T_Pausa">
+        <di:waypoint x="805" y="450" />
+        <di:waypoint x="805" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Pausa_G_Vuelve_di" bpmnElement="F_T_Pausa_G_Vuelve">
+        <di:waypoint x="870" y="670" />
+        <di:waypoint x="955" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Vuelve_E_Vuelve_di" bpmnElement="F_G_Vuelve_E_Vuelve">
+        <di:waypoint x="1005" y="670" />
+        <di:waypoint x="1137" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Vuelve_E_Cierre_di" bpmnElement="F_G_Vuelve_E_Cierre">
+        <di:waypoint x="980" y="695" />
+        <di:waypoint x="980" y="772" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_E_Vuelve_T_Reactivar_di" bpmnElement="F_E_Vuelve_T_Reactivar">
+        <di:waypoint x="1155" y="652" />
+        <di:waypoint x="1155" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Reactivar_M_Bandeja_di" bpmnElement="F_T_Reactivar_M_Bandeja">
+        <di:waypoint x="1155" y="370" />
+        <di:waypoint x="1155" y="342" />
+        <di:waypoint x="335" y="342" />
+        <di:waypoint x="335" y="525" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_E_Cierre_F_Pendiente_di" bpmnElement="F_E_Cierre_F_Pendiente">
+        <di:waypoint x="998" y="790" />
+        <di:waypoint x="1137" y="790" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="N_Ruta_di" bpmnElement="N_Ruta">
+        <dc:Bounds x="1550" y="125" width="260" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Asoc_N_Ruta_di" bpmnElement="Asoc_N_Ruta">
+        <di:waypoint x="1330" y="265" />
+        <di:waypoint x="1680" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="N_Sin_di" bpmnElement="N_Sin">
+        <dc:Bounds x="1030" y="125" width="250" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Asoc_N_Sin_di" bpmnElement="Asoc_N_Sin">
+        <di:waypoint x="1155" y="250" />
+        <di:waypoint x="1155" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="N_Gestor_di" bpmnElement="N_Gestor">
+        <dc:Bounds x="305" y="759" width="300" height="62" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

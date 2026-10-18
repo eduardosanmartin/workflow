@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definiciones_InicioQr" targetNamespace="http://unach.cl/workflow-matricula" exporter="Sistema WorkFlow Matrícula" exporterVersion="1.0">
+  <bpmn:collaboration id="Colaboracion_InicioQr">
+    <bpmn:participant id="Pool_InicioQr" name="Inicio por QR (autoinicio)" processRef="Proceso_InicioQr" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proceso_InicioQr" name="Inicio de proceso por QR" isExecutable="false">
+    <bpmn:documentation>RF-10 y RF-11. Formulario público optimizado para celular. Solo con un proceso ACTIVO; un RUT tiene un solo expediente por proceso.</bpmn:documentation>
+    <bpmn:laneSet id="Carriles_InicioQr">
+      <bpmn:lane id="L_Post" name="Postulante (formulario QR, público)">
+        <bpmn:flowNodeRef>I_Qr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Rut</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Rut</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Completar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Seguimiento</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Qr</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_Sis" name="Sistema">
+        <bpmn:flowNodeRef>G_Activo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Cerrado</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Validar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_RutOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_TieneExp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Reenviar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Reenviado</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Registrado</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Enmascarar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Completo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>M_Datos</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Crear</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="I_Qr" name="Escanea el QR «Inicia aquí»">
+      <bpmn:outgoing>F_I_Qr_G_Activo</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="G_Activo" name="¿Hay un proceso activo?">
+      <bpmn:incoming>F_I_Qr_G_Activo</bpmn:incoming>
+      <bpmn:outgoing>F_G_Activo_F_Cerrado</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Activo_M_Rut</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="F_Cerrado" name="«El proceso de matrícula no está abierto»">
+      <bpmn:incoming>F_G_Activo_F_Cerrado</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="M_Rut" name="">
+      <bpmn:incoming>F_G_Activo_M_Rut</bpmn:incoming>
+      <bpmn:incoming>F_G_RutOk_M_Rut</bpmn:incoming>
+      <bpmn:outgoing>F_M_Rut_T_Rut</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="T_Rut" name="Ingresa su RUT y resuelve el CAPTCHA">
+      <bpmn:incoming>F_M_Rut_T_Rut</bpmn:incoming>
+      <bpmn:outgoing>F_T_Rut_T_Validar</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="T_Validar" name="Validar CAPTCHA y RUT (dígito verificador)">
+      <bpmn:incoming>F_T_Rut_T_Validar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Validar_G_RutOk</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="G_RutOk" name="¿Válido?">
+      <bpmn:incoming>F_T_Validar_G_RutOk</bpmn:incoming>
+      <bpmn:outgoing>F_G_RutOk_M_Rut</bpmn:outgoing>
+      <bpmn:outgoing>F_G_RutOk_G_TieneExp</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="G_TieneExp" name="¿Ya tiene expediente en el proceso?">
+      <bpmn:incoming>F_G_RutOk_G_TieneExp</bpmn:incoming>
+      <bpmn:outgoing>F_G_TieneExp_T_Reenviar</bpmn:outgoing>
+      <bpmn:outgoing>F_G_TieneExp_G_Registrado</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="T_Reenviar" name="Reenviar el enlace a su correo registrado (máx. 3 por hora)">
+      <bpmn:documentation>No muestra el enlace en pantalla: «Te enviamos tu enlace a j***@gmail.com».</bpmn:documentation>
+      <bpmn:incoming>F_G_TieneExp_T_Reenviar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Reenviar_F_Reenviado</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="F_Reenviado" name="Enlace reenviado">
+      <bpmn:incoming>F_T_Reenviar_F_Reenviado</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="G_Registrado" name="¿RUT registrado?">
+      <bpmn:incoming>F_G_TieneExp_G_Registrado</bpmn:incoming>
+      <bpmn:outgoing>F_G_Registrado_T_Enmascarar</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Registrado_T_Completo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="T_Enmascarar" name="Mostrar sus datos enmascarados y pedir solo los pendientes">
+      <bpmn:incoming>F_G_Registrado_T_Enmascarar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Enmascarar_M_Datos</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="T_Completo" name="Mostrar el formulario completo">
+      <bpmn:incoming>F_G_Registrado_T_Completo</bpmn:incoming>
+      <bpmn:outgoing>F_T_Completo_M_Datos</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_Datos" name="">
+      <bpmn:incoming>F_T_Enmascarar_M_Datos</bpmn:incoming>
+      <bpmn:incoming>F_T_Completo_M_Datos</bpmn:incoming>
+      <bpmn:outgoing>F_M_Datos_T_Completar</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="T_Completar" name="Completa los datos pendientes y marca sus temas de duda">
+      <bpmn:incoming>F_M_Datos_T_Completar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Completar_T_Crear</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="T_Crear" name="Crear expediente EN_ESPERA en «Iniciado», asignar número y enviar correo">
+      <bpmn:incoming>F_T_Completar_T_Crear</bpmn:incoming>
+      <bpmn:outgoing>F_T_Crear_T_Seguimiento</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:task id="T_Seguimiento" name="Ve su número y su recorrido en el celular">
+      <bpmn:incoming>F_T_Crear_T_Seguimiento</bpmn:incoming>
+      <bpmn:outgoing>F_T_Seguimiento_F_Qr</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="F_Qr" name="Espera en «Iniciado» con su ruta propuesta">
+      <bpmn:incoming>F_T_Seguimiento_F_Qr</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_I_Qr_G_Activo" sourceRef="I_Qr" targetRef="G_Activo" />
+    <bpmn:sequenceFlow id="F_G_Activo_F_Cerrado" name="No" sourceRef="G_Activo" targetRef="F_Cerrado" />
+    <bpmn:sequenceFlow id="F_G_Activo_M_Rut" name="Sí" sourceRef="G_Activo" targetRef="M_Rut" />
+    <bpmn:sequenceFlow id="F_M_Rut_T_Rut" sourceRef="M_Rut" targetRef="T_Rut" />
+    <bpmn:sequenceFlow id="F_T_Rut_T_Validar" sourceRef="T_Rut" targetRef="T_Validar" />
+    <bpmn:sequenceFlow id="F_T_Validar_G_RutOk" sourceRef="T_Validar" targetRef="G_RutOk" />
+    <bpmn:sequenceFlow id="F_G_RutOk_M_Rut" name="No: corregir" sourceRef="G_RutOk" targetRef="M_Rut" />
+    <bpmn:sequenceFlow id="F_G_RutOk_G_TieneExp" name="Sí" sourceRef="G_RutOk" targetRef="G_TieneExp" />
+    <bpmn:sequenceFlow id="F_G_TieneExp_T_Reenviar" name="Sí" sourceRef="G_TieneExp" targetRef="T_Reenviar" />
+    <bpmn:sequenceFlow id="F_G_TieneExp_G_Registrado" name="No" sourceRef="G_TieneExp" targetRef="G_Registrado" />
+    <bpmn:sequenceFlow id="F_T_Reenviar_F_Reenviado" sourceRef="T_Reenviar" targetRef="F_Reenviado" />
+    <bpmn:sequenceFlow id="F_G_Registrado_T_Enmascarar" name="Sí" sourceRef="G_Registrado" targetRef="T_Enmascarar" />
+    <bpmn:sequenceFlow id="F_G_Registrado_T_Completo" name="No" sourceRef="G_Registrado" targetRef="T_Completo" />
+    <bpmn:sequenceFlow id="F_T_Enmascarar_M_Datos" sourceRef="T_Enmascarar" targetRef="M_Datos" />
+    <bpmn:sequenceFlow id="F_T_Completo_M_Datos" sourceRef="T_Completo" targetRef="M_Datos" />
+    <bpmn:sequenceFlow id="F_M_Datos_T_Completar" sourceRef="M_Datos" targetRef="T_Completar" />
+    <bpmn:sequenceFlow id="F_T_Completar_T_Crear" sourceRef="T_Completar" targetRef="T_Crear" />
+    <bpmn:sequenceFlow id="F_T_Crear_T_Seguimiento" sourceRef="T_Crear" targetRef="T_Seguimiento" />
+    <bpmn:sequenceFlow id="F_T_Seguimiento_F_Qr" sourceRef="T_Seguimiento" targetRef="F_Qr" />
+    <bpmn:textAnnotation id="N_Privacidad"><bpmn:text>Con «enmascarar datos» activo (por defecto), la página nunca contiene los datos completos: Ju*** Pé***, j***@gmail.com.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:textAnnotation id="N_Concurrencia"><bpmn:text>El inicio bloquea el proceso activo: dos inicios simultáneos del mismo RUT crean un solo expediente.</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagrama_InicioQr">
+    <bpmndi:BPMNPlane id="Plano_InicioQr" bpmnElement="Colaboracion_InicioQr">
+      <bpmndi:BPMNShape id="Pool_InicioQr_di" bpmnElement="Pool_InicioQr" isHorizontal="true">
+        <dc:Bounds x="120" y="80" width="2445" height="400" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Post_di" bpmnElement="L_Post" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="2415" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Sis_di" bpmnElement="L_Sis" isHorizontal="true">
+        <dc:Bounds x="150" y="220" width="2415" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="I_Qr_di" bpmnElement="I_Qr">
+        <dc:Bounds x="262" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="225" y="172" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Activo_di" bpmnElement="G_Activo" isMarkerVisible="true">
+        <dc:Bounds x="430" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="400" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Cerrado_di" bpmnElement="F_Cerrado">
+        <dc:Bounds x="437" y="392" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="400" y="432" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Rut_di" bpmnElement="M_Rut" isMarkerVisible="true">
+        <dc:Bounds x="430" y="125" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="400" y="179" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Rut_di" bpmnElement="T_Rut">
+        <dc:Bounds x="565" y="110" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Validar_di" bpmnElement="T_Validar">
+        <dc:Bounds x="740" y="250" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_RutOk_di" bpmnElement="G_RutOk" isMarkerVisible="true">
+        <dc:Bounds x="955" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="925" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_TieneExp_di" bpmnElement="G_TieneExp" isMarkerVisible="true">
+        <dc:Bounds x="1130" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1100" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Reenviar_di" bpmnElement="T_Reenviar">
+        <dc:Bounds x="1090" y="370" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Reenviado_di" bpmnElement="F_Reenviado">
+        <dc:Bounds x="1312" y="392" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1275" y="432" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Registrado_di" bpmnElement="G_Registrado" isMarkerVisible="true">
+        <dc:Bounds x="1305" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1275" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Enmascarar_di" bpmnElement="T_Enmascarar">
+        <dc:Bounds x="1440" y="250" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Completo_di" bpmnElement="T_Completo">
+        <dc:Bounds x="1440" y="370" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Datos_di" bpmnElement="M_Datos" isMarkerVisible="true">
+        <dc:Bounds x="1655" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1625" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Completar_di" bpmnElement="T_Completar">
+        <dc:Bounds x="1790" y="110" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Crear_di" bpmnElement="T_Crear">
+        <dc:Bounds x="1965" y="250" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Seguimiento_di" bpmnElement="T_Seguimiento">
+        <dc:Bounds x="2140" y="110" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Qr_di" bpmnElement="F_Qr">
+        <dc:Bounds x="2362" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="2325" y="172" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F_I_Qr_G_Activo_di" bpmnElement="F_I_Qr_G_Activo">
+        <di:waypoint x="298" y="150" />
+        <di:waypoint x="364" y="150" />
+        <di:waypoint x="364" y="290" />
+        <di:waypoint x="430" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Activo_F_Cerrado_di" bpmnElement="F_G_Activo_F_Cerrado">
+        <di:waypoint x="455" y="315" />
+        <di:waypoint x="455" y="392" />
+        <bpmndi:BPMNLabel><dc:Bounds x="461" y="346" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Activo_M_Rut_di" bpmnElement="F_G_Activo_M_Rut">
+        <di:waypoint x="455" y="265" />
+        <di:waypoint x="455" y="175" />
+        <bpmndi:BPMNLabel><dc:Bounds x="461" y="213" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_M_Rut_T_Rut_di" bpmnElement="F_M_Rut_T_Rut">
+        <di:waypoint x="480" y="150" />
+        <di:waypoint x="565" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Rut_T_Validar_di" bpmnElement="F_T_Rut_T_Validar">
+        <di:waypoint x="695" y="150" />
+        <di:waypoint x="718" y="150" />
+        <di:waypoint x="718" y="290" />
+        <di:waypoint x="740" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Validar_G_RutOk_di" bpmnElement="F_T_Validar_G_RutOk">
+        <di:waypoint x="870" y="290" />
+        <di:waypoint x="955" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_RutOk_M_Rut_di" bpmnElement="F_G_RutOk_M_Rut">
+        <di:waypoint x="980" y="265" />
+        <di:waypoint x="980" y="94" />
+        <di:waypoint x="455" y="94" />
+        <di:waypoint x="455" y="125" />
+        <bpmndi:BPMNLabel><dc:Bounds x="677" y="98" width="81" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_RutOk_G_TieneExp_di" bpmnElement="F_G_RutOk_G_TieneExp">
+        <di:waypoint x="1005" y="290" />
+        <di:waypoint x="1130" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1038" y="272" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_TieneExp_T_Reenviar_di" bpmnElement="F_G_TieneExp_T_Reenviar">
+        <di:waypoint x="1155" y="315" />
+        <di:waypoint x="1155" y="370" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1161" y="336" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_TieneExp_G_Registrado_di" bpmnElement="F_G_TieneExp_G_Registrado">
+        <di:waypoint x="1180" y="290" />
+        <di:waypoint x="1305" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1212" y="272" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Reenviar_F_Reenviado_di" bpmnElement="F_T_Reenviar_F_Reenviado">
+        <di:waypoint x="1220" y="410" />
+        <di:waypoint x="1312" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Registrado_T_Enmascarar_di" bpmnElement="F_G_Registrado_T_Enmascarar">
+        <di:waypoint x="1355" y="290" />
+        <di:waypoint x="1440" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1368" y="272" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Registrado_T_Completo_di" bpmnElement="F_G_Registrado_T_Completo">
+        <di:waypoint x="1355" y="290" />
+        <di:waypoint x="1385" y="290" />
+        <di:waypoint x="1385" y="410" />
+        <di:waypoint x="1440" y="410" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1391" y="343" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Enmascarar_M_Datos_di" bpmnElement="F_T_Enmascarar_M_Datos">
+        <di:waypoint x="1570" y="290" />
+        <di:waypoint x="1655" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Completo_M_Datos_di" bpmnElement="F_T_Completo_M_Datos">
+        <di:waypoint x="1570" y="410" />
+        <di:waypoint x="1680" y="410" />
+        <di:waypoint x="1680" y="315" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_M_Datos_T_Completar_di" bpmnElement="F_M_Datos_T_Completar">
+        <di:waypoint x="1680" y="265" />
+        <di:waypoint x="1680" y="150" />
+        <di:waypoint x="1790" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Completar_T_Crear_di" bpmnElement="F_T_Completar_T_Crear">
+        <di:waypoint x="1920" y="150" />
+        <di:waypoint x="1942" y="150" />
+        <di:waypoint x="1942" y="290" />
+        <di:waypoint x="1965" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Crear_T_Seguimiento_di" bpmnElement="F_T_Crear_T_Seguimiento">
+        <di:waypoint x="2095" y="290" />
+        <di:waypoint x="2118" y="290" />
+        <di:waypoint x="2118" y="150" />
+        <di:waypoint x="2140" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Seguimiento_F_Qr_di" bpmnElement="F_T_Seguimiento_F_Qr">
+        <di:waypoint x="2270" y="150" />
+        <di:waypoint x="2362" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="N_Privacidad_di" bpmnElement="N_Privacidad">
+        <dc:Bounds x="1180" y="125" width="300" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Concurrencia_di" bpmnElement="N_Concurrencia">
+        <dc:Bounds x="1715" y="385" width="280" height="50" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

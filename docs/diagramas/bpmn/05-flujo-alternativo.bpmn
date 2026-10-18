@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definiciones_FlujoAlternativo" targetNamespace="http://unach.cl/workflow-matricula" exporter="Sistema WorkFlow Matrícula" exporterVersion="1.0">
+  <bpmn:collaboration id="Colaboracion_FlujoAlternativo">
+    <bpmn:participant id="Pool_FlujoAlternativo" name="Flujo alternativo" processRef="Proceso_FlujoAlternativo" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proceso_FlujoAlternativo" name="Flujo alternativo (cierre manual)" isExecutable="false">
+    <bpmn:documentation>RF-29. Para casos que no pueden terminar en MNP (ej.: pago en efectivo y firma manual). La secuencia de fases es fija; la última es la fase final manual.</bpmn:documentation>
+    <bpmn:laneSet id="Carriles_FlujoAlternativo">
+      <bpmn:lane id="L_Post" name="Postulante">
+        <bpmn:flowNodeRef>M_Espera</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Espera</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_Resp" name="Responsable de la fase del flujo">
+        <bpmn:flowNodeRef>T_Atender</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Manual</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Final</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Cierre</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Devolver</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L_Sis" name="Sistema">
+        <bpmn:flowNodeRef>Inicio</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Quitar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Siguiente</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Matricular</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Fin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Principal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>F_Principal</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Inicio" name="Derivado al flujo en su fase de entrada">
+      <bpmn:outgoing>F_Inicio_T_Quitar</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="T_Quitar" name="Quitar MNP y las fases planificadas del flujo principal">
+      <bpmn:incoming>F_Inicio_T_Quitar</bpmn:incoming>
+      <bpmn:outgoing>F_T_Quitar_M_Espera</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="M_Espera" name="">
+      <bpmn:incoming>F_T_Quitar_M_Espera</bpmn:incoming>
+      <bpmn:incoming>F_T_Siguiente_M_Espera</bpmn:incoming>
+      <bpmn:outgoing>F_M_Espera_T_Espera</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="T_Espera" name="Espera en la fase del flujo">
+      <bpmn:incoming>F_M_Espera_T_Espera</bpmn:incoming>
+      <bpmn:outgoing>F_T_Espera_T_Atender</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:userTask id="T_Atender" name="Atender en la fase del flujo">
+      <bpmn:incoming>F_T_Espera_T_Atender</bpmn:incoming>
+      <bpmn:outgoing>F_T_Atender_G_Manual</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="G_Manual" name="¿El caso sigue siendo manual?">
+      <bpmn:incoming>F_T_Atender_G_Manual</bpmn:incoming>
+      <bpmn:outgoing>F_G_Manual_G_Final</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Manual_T_Devolver</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="G_Final" name="¿Es la fase final?">
+      <bpmn:incoming>F_G_Manual_G_Final</bpmn:incoming>
+      <bpmn:outgoing>F_G_Final_T_Siguiente</bpmn:outgoing>
+      <bpmn:outgoing>F_G_Final_T_Cierre</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="T_Siguiente" name="Pasar a la fase siguiente del flujo (secuencia fija)">
+      <bpmn:incoming>F_G_Final_T_Siguiente</bpmn:incoming>
+      <bpmn:outgoing>F_T_Siguiente_M_Espera</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="T_Cierre" name="Cerrar matrícula manualmente (detalle obligatorio, ej.: boleta)">
+      <bpmn:incoming>F_G_Final_T_Cierre</bpmn:incoming>
+      <bpmn:outgoing>F_T_Cierre_T_Matricular</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="T_Matricular" name="Matriculado con cierre MANUAL y correo de matrícula">
+      <bpmn:incoming>F_T_Cierre_T_Matricular</bpmn:incoming>
+      <bpmn:outgoing>F_T_Matricular_Fin</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Fin" name="Matriculado (cierre manual)">
+      <bpmn:incoming>F_T_Matricular_Fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="T_Devolver" name="Devolver al flujo principal (motivo y nueva ruta)">
+      <bpmn:incoming>F_G_Manual_T_Devolver</bpmn:incoming>
+      <bpmn:outgoing>F_T_Devolver_T_Principal</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="T_Principal" name="Quitar las fases del flujo; la nueva ruta termina en MNP">
+      <bpmn:incoming>F_T_Devolver_T_Principal</bpmn:incoming>
+      <bpmn:outgoing>F_T_Principal_F_Principal</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="F_Principal" name="Vuelve al flujo principal">
+      <bpmn:incoming>F_T_Principal_F_Principal</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_Inicio_T_Quitar" sourceRef="Inicio" targetRef="T_Quitar" />
+    <bpmn:sequenceFlow id="F_T_Quitar_M_Espera" sourceRef="T_Quitar" targetRef="M_Espera" />
+    <bpmn:sequenceFlow id="F_M_Espera_T_Espera" sourceRef="M_Espera" targetRef="T_Espera" />
+    <bpmn:sequenceFlow id="F_T_Espera_T_Atender" sourceRef="T_Espera" targetRef="T_Atender" />
+    <bpmn:sequenceFlow id="F_T_Atender_G_Manual" sourceRef="T_Atender" targetRef="G_Manual" />
+    <bpmn:sequenceFlow id="F_G_Manual_G_Final" name="Sí" sourceRef="G_Manual" targetRef="G_Final" />
+    <bpmn:sequenceFlow id="F_G_Manual_T_Devolver" name="No" sourceRef="G_Manual" targetRef="T_Devolver" />
+    <bpmn:sequenceFlow id="F_T_Devolver_T_Principal" sourceRef="T_Devolver" targetRef="T_Principal" />
+    <bpmn:sequenceFlow id="F_T_Principal_F_Principal" sourceRef="T_Principal" targetRef="F_Principal" />
+    <bpmn:sequenceFlow id="F_G_Final_T_Siguiente" name="No" sourceRef="G_Final" targetRef="T_Siguiente" />
+    <bpmn:sequenceFlow id="F_G_Final_T_Cierre" name="Sí" sourceRef="G_Final" targetRef="T_Cierre" />
+    <bpmn:sequenceFlow id="F_T_Siguiente_M_Espera" sourceRef="T_Siguiente" targetRef="M_Espera" />
+    <bpmn:sequenceFlow id="F_T_Cierre_T_Matricular" sourceRef="T_Cierre" targetRef="T_Matricular" />
+    <bpmn:sequenceFlow id="F_T_Matricular_Fin" sourceRef="T_Matricular" targetRef="Fin" />
+    <bpmn:textAnnotation id="N_Regla"><bpmn:text>Dentro del flujo no se agregan, quitan ni reordenan fases, ni se deriva a otra fase.</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagrama_FlujoAlternativo">
+    <bpmndi:BPMNPlane id="Plano_FlujoAlternativo" bpmnElement="Colaboracion_FlujoAlternativo">
+      <bpmndi:BPMNShape id="Pool_FlujoAlternativo_di" bpmnElement="Pool_FlujoAlternativo" isHorizontal="true">
+        <dc:Bounds x="120" y="80" width="1920" height="660" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Post_di" bpmnElement="L_Post" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="1890" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Resp_di" bpmnElement="L_Resp" isHorizontal="true">
+        <dc:Bounds x="150" y="220" width="1890" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Sis_di" bpmnElement="L_Sis" isHorizontal="true">
+        <dc:Bounds x="150" y="480" width="1890" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Inicio_di" bpmnElement="Inicio">
+        <dc:Bounds x="262" y="532" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="225" y="572" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Quitar_di" bpmnElement="T_Quitar">
+        <dc:Bounds x="390" y="510" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Espera_di" bpmnElement="M_Espera" isMarkerVisible="true">
+        <dc:Bounds x="605" y="125" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="575" y="179" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Espera_di" bpmnElement="T_Espera">
+        <dc:Bounds x="740" y="110" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Atender_di" bpmnElement="T_Atender">
+        <dc:Bounds x="915" y="250" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Manual_di" bpmnElement="G_Manual" isMarkerVisible="true">
+        <dc:Bounds x="1130" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1100" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Final_di" bpmnElement="G_Final" isMarkerVisible="true">
+        <dc:Bounds x="1305" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1275" y="319" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Siguiente_di" bpmnElement="T_Siguiente">
+        <dc:Bounds x="1265" y="510" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Cierre_di" bpmnElement="T_Cierre">
+        <dc:Bounds x="1440" y="250" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Matricular_di" bpmnElement="T_Matricular">
+        <dc:Bounds x="1615" y="510" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Fin_di" bpmnElement="Fin">
+        <dc:Bounds x="1837" y="532" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1800" y="572" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Devolver_di" bpmnElement="T_Devolver">
+        <dc:Bounds x="1090" y="370" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Principal_di" bpmnElement="T_Principal">
+        <dc:Bounds x="1090" y="630" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Principal_di" bpmnElement="F_Principal">
+        <dc:Bounds x="1312" y="652" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1275" y="692" width="110" height="36" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F_Inicio_T_Quitar_di" bpmnElement="F_Inicio_T_Quitar">
+        <di:waypoint x="298" y="550" />
+        <di:waypoint x="390" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Quitar_M_Espera_di" bpmnElement="F_T_Quitar_M_Espera">
+        <di:waypoint x="520" y="550" />
+        <di:waypoint x="562" y="550" />
+        <di:waypoint x="562" y="150" />
+        <di:waypoint x="605" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_M_Espera_T_Espera_di" bpmnElement="F_M_Espera_T_Espera">
+        <di:waypoint x="655" y="150" />
+        <di:waypoint x="740" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Espera_T_Atender_di" bpmnElement="F_T_Espera_T_Atender">
+        <di:waypoint x="870" y="150" />
+        <di:waypoint x="892" y="150" />
+        <di:waypoint x="892" y="290" />
+        <di:waypoint x="915" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Atender_G_Manual_di" bpmnElement="F_T_Atender_G_Manual">
+        <di:waypoint x="1045" y="290" />
+        <di:waypoint x="1130" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Manual_G_Final_di" bpmnElement="F_G_Manual_G_Final">
+        <di:waypoint x="1180" y="290" />
+        <di:waypoint x="1305" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1212" y="272" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Manual_T_Devolver_di" bpmnElement="F_G_Manual_T_Devolver">
+        <di:waypoint x="1155" y="315" />
+        <di:waypoint x="1155" y="370" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1161" y="336" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Devolver_T_Principal_di" bpmnElement="F_T_Devolver_T_Principal">
+        <di:waypoint x="1155" y="450" />
+        <di:waypoint x="1155" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Principal_F_Principal_di" bpmnElement="F_T_Principal_F_Principal">
+        <di:waypoint x="1220" y="670" />
+        <di:waypoint x="1312" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Final_T_Siguiente_di" bpmnElement="F_G_Final_T_Siguiente">
+        <di:waypoint x="1330" y="315" />
+        <di:waypoint x="1330" y="510" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1336" y="406" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_G_Final_T_Cierre_di" bpmnElement="F_G_Final_T_Cierre">
+        <di:waypoint x="1355" y="290" />
+        <di:waypoint x="1440" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1368" y="272" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Siguiente_M_Espera_di" bpmnElement="F_T_Siguiente_M_Espera">
+        <di:waypoint x="1265" y="550" />
+        <di:waypoint x="630" y="550" />
+        <di:waypoint x="630" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Cierre_T_Matricular_di" bpmnElement="F_T_Cierre_T_Matricular">
+        <di:waypoint x="1570" y="290" />
+        <di:waypoint x="1592" y="290" />
+        <di:waypoint x="1592" y="550" />
+        <di:waypoint x="1615" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_T_Matricular_Fin_di" bpmnElement="F_T_Matricular_Fin">
+        <di:waypoint x="1745" y="550" />
+        <di:waypoint x="1837" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="N_Regla_di" bpmnElement="N_Regla">
+        <dc:Bounds x="1190" y="125" width="280" height="50" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
