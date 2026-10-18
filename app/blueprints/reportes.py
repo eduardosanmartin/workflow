@@ -1,5 +1,7 @@
 """Reportería (§10, pantalla 11): índice, cada reporte con sus filtros y exportación (RF-18)."""
 
+from urllib.parse import urlencode
+
 from flask import Blueprint, Response, abort, g, render_template, request
 
 from app import models as m
@@ -60,7 +62,9 @@ def ver(slug):
     if vacio:
         return vacio
     resultado = r.generar(slug, filtros)
-    consulta = request.query_string.decode()
+    if request.args.get("parcial") == "1":
+        return render_template("reportes/_resultado.html", resultado=resultado, limite=r.LIMITE_PANTALLA)
+    consulta = urlencode([(k, v) for k, v in request.args.items(multi=True) if k != "parcial"])
     return render_template(
         "reportes/ver.html", resultado=resultado, reporte=resultado["reporte"], consulta=consulta,
         carreras=m.Carrera.select().order_by(m.Carrera.nombre),

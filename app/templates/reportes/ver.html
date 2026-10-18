@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
 {% block titulo %}{{ reporte.titulo }}{% endblock %}
-{% block scripts %}{% if resultado.tiempo_real %}<meta http-equiv="refresh" content="30">{% endif %}{% endblock %}
+{% block scripts %}{% if resultado.tiempo_real %}<script src="{{ url_for('static', filename='js/sondeo.js') }}" defer></script>{% endif %}{% endblock %}
 {% block contenido %}
-{% set SIN_CORTE = ['Número', 'RUT', 'Fecha', 'Inicio', 'Día', 'Hora', 'Registrado', 'En espera desde'] %}
 <p class="miga"><a href="{{ url_for('reportes.indice', proceso=filtros.proceso.id) }}">Reportes</a> › {{ reporte.titulo }}</p>
 <div class="encabezado">
   <h1>{{ reporte.titulo }}</h1>
@@ -70,46 +69,16 @@
   </div>
 </form>
 <p class="nota">{{ resultado.fechas }}
-  {% if resultado.tiempo_real %}Se actualiza cada 30 segundos.{% endif %}
   Generado el {{ resultado.generado }}.</p>
+{% if resultado.tiempo_real %}<p class="nota" id="estado-sondeo">Se actualiza automáticamente cada 10 segundos.</p>{% endif %}
 
-<dl class="indicadores">
-  {% for etiqueta, valor in resultado.indicadores %}
-  <div class="tarjeta"><dt>{{ etiqueta }}</dt><dd>{{ valor }}</dd></div>
-  {% endfor %}
-</dl>
-
-{% for tabla in resultado.tablas %}
-<section class="separada">
-  <h2>{{ tabla.titulo }}{% if tabla.lista and tabla.filas %} <span class="contador">{{ tabla.filas|length }}</span>{% endif %}</h2>
-  {% if tabla.nota %}<p class="nota">{{ tabla.nota }}</p>{% endif %}
-  {% if tabla.filas %}
-  <div class="tabla-desplazable">
-  <table class="tabla-apilable">
-    <thead><tr>{% for columna in tabla.columnas %}<th scope="col">{{ columna }}</th>{% endfor %}</tr></thead>
-    <tbody>
-    {% for fila in tabla.filas[:limite] %}
-    <tr>
-      {% for celda in fila %}
-      {% set columna = tabla.columnas[loop.index0] %}
-      <td {% if not loop.first %}data-etiqueta="{{ columna }}"{% endif %}
-          class="{{ 'numero' if celda is number }} {{ 'sin-corte' if celda.segundos is defined or columna in SIN_CORTE }}">
-        {%- if celda.postulante_id is defined -%}
-        <a href="{{ url_for('ficha.ver', postulante_id=celda.postulante_id) }}">{{ celda }}</a>
-        {%- else -%}{{ celda }}{%- endif -%}
-      </td>
-      {% endfor %}
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-  {% if tabla.filas|length > limite %}<p class="nota">Se muestran las primeras {{ limite }} filas de {{ tabla.filas|length }}. Descargue el reporte para verlas todas.</p>{% endif %}
-  {% else %}
-  <p class="tarjeta nota">{{ tabla.vacio }}</p>
-  {% endif %}
-</section>
-{% endfor %}
+{% if resultado.tiempo_real %}
+<div id="resultado" data-sondeo="{{ request.path }}?{{ consulta ~ '&' if consulta }}parcial=1">
+  {% include "reportes/_resultado.html" %}
+</div>
+{% else %}
+{% include "reportes/_resultado.html" %}
+{% endif %}
 
 <nav class="separada" aria-label="Otros reportes">
   <h2>Otros reportes</h2>

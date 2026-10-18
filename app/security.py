@@ -103,7 +103,7 @@ def cargar_usuario():
                 session.clear()
             else:
                 if request.headers.get("X-Sondeo") != "1":
-                    # La actualización automática de la bandeja no cuenta como actividad (RF-22)
+                    # La actualización automática (bandeja, reportes en tiempo real) no cuenta como actividad (RF-22)
                     session["ultimo_acceso"] = time.time()
                 g.usuario = usuario
 

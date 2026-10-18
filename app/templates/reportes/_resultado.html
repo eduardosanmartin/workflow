@@ -1,0 +1,39 @@
+{# Indicadores y tablas; en los reportes en tiempo real se reemplaza cada 10 segundos #}
+{% set SIN_CORTE = ['Número', 'RUT', 'Fecha', 'Inicio', 'Día', 'Hora', 'Registrado', 'En espera desde'] %}
+<dl class="indicadores">
+  {% for etiqueta, valor in resultado.indicadores %}
+  <div class="tarjeta"><dt>{{ etiqueta }}</dt><dd>{{ valor }}</dd></div>
+  {% endfor %}
+</dl>
+
+{% for tabla in resultado.tablas %}
+<section class="separada">
+  <h2>{{ tabla.titulo }}{% if tabla.lista and tabla.filas %} <span class="contador">{{ tabla.filas|length }}</span>{% endif %}</h2>
+  {% if tabla.nota %}<p class="nota">{{ tabla.nota }}</p>{% endif %}
+  {% if tabla.filas %}
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr>{% for columna in tabla.columnas %}<th scope="col">{{ columna }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for fila in tabla.filas[:limite] %}
+    <tr>
+      {% for celda in fila %}
+      {% set columna = tabla.columnas[loop.index0] %}
+      <td {% if not loop.first %}data-etiqueta="{{ columna }}"{% endif %}
+          class="{{ 'numero' if celda is number }} {{ 'sin-corte' if celda.segundos is defined or columna in SIN_CORTE }}">
+        {%- if celda.postulante_id is defined -%}
+        <a href="{{ url_for('ficha.ver', postulante_id=celda.postulante_id) }}">{{ celda }}</a>
+        {%- else -%}{{ celda }}{%- endif -%}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if tabla.filas|length > limite %}<p class="nota">Se muestran las primeras {{ limite }} filas de {{ tabla.filas|length }}. Descargue el reporte para verlas todas.</p>{% endif %}
+  {% else %}
+  <p class="tarjeta nota">{{ tabla.vacio }}</p>
+  {% endif %}
+</section>
+{% endfor %}

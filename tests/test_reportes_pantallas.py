@@ -83,9 +83,14 @@ def test_estado_con_filtros_y_enlace_a_la_ficha(staff, proceso):
     assert "posterior" in html
 
 
-def test_espera_se_actualiza_sola(staff, proceso):
-    html = texto(staff.get("/reportes/espera"))
-    assert 'http-equiv="refresh"' in html and "M-0002" in html
+def test_espera_se_actualiza_cada_10_segundos_sin_mantener_viva_la_sesion(staff, proceso):
+    html = texto(staff.get(f"/reportes/espera?proceso={proceso.id}"))
+    assert "js/sondeo.js" in html and "cada 10 segundos" in html and 'http-equiv="refresh"' not in html
+    assert f'data-sondeo="/reportes/espera?proceso={proceso.id}&amp;parcial=1"' in html
+    parcial = staff.get(f"/reportes/espera?proceso={proceso.id}&parcial=1", headers={"X-Sondeo": "1"})
+    html = texto(parcial)
+    assert parcial.status_code == 200 and "M-0002" in html and "<html" not in html and "Filtrar" not in html
+    assert "js/sondeo.js" not in texto(staff.get("/reportes/estado"))  # solo el reporte en tiempo real
 
 
 def test_descargas(staff, proceso):
