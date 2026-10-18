@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}{{ reporte.titulo }}{% endblock %}
+{% block scripts %}{% if resultado.tiempo_real %}<meta http-equiv="refresh" content="30">{% endif %}{% endblock %}
+{% block contenido %}
+{% set SIN_CORTE = ['Número', 'RUT', 'Fecha', 'Inicio', 'Día', 'Hora', 'Registrado', 'En espera desde'] %}
+<p class="miga"><a href="{{ url_for('reportes.indice', proceso=filtros.proceso.id) }}">Reportes</a> › {{ reporte.titulo }}</p>
+<div class="encabezado">
+  <h1>{{ reporte.titulo }}</h1>
+  <div class="acciones-fila">
+    <a class="boton secundario" href="{{ url_for('reportes.exportar', slug=reporte.slug) }}?formato=xlsx{{ '&' ~ consulta if consulta }}">Descargar Excel</a>
+    <a class="boton secundario" href="{{ url_for('reportes.exportar', slug=reporte.slug) }}?formato=csv{{ '&' ~ consulta if consulta }}">Descargar CSV</a>
+  </div>
+</div>
+{% include "reportes/_cabecera.html" %}
+
+{% for error in filtros.errores %}
+<div class="mensaje mensaje-error" role="alert"><span class="icono" aria-hidden="true">✖</span><span>{{ error }}</span></div>
+{% endfor %}
+
+<form method="get" class="tarjeta filtros separada" aria-label="Filtros del reporte">
+  <div>
+    <label for="proceso">Proceso</label>
+    <select id="proceso" name="proceso">
+      {% for p in procesos %}<option value="{{ p.id }}" {% if p.id == filtros.proceso.id %}selected{% endif %}>{{ p.nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% if 'fechas' in reporte.filtros %}
+  <div>
+    <label for="desde">Desde</label>
+    <input id="desde" name="desde" type="date" value="{{ filtros.desde or '' }}">
+  </div>
+  <div>
+    <label for="hasta">Hasta</label>
+    <input id="hasta" name="hasta" type="date" value="{{ filtros.hasta or '' }}">
+  </div>
+  {% endif %}
+  {% if 'carrera' in reporte.filtros %}
+  <div>
+    <label for="carrera">Carrera</label>
+    <select id="carrera" name="carrera">
+      <option value="">Todas</option>
+      {% for c in carreras %}<option value="{{ c.codigo }}" {% if filtros.carrera == c.codigo %}selected{% endif %}>{{ c.nombre }}{% if not c.activo %} (inactiva){% endif %}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if 'fase' in reporte.filtros %}
+  <div>
+    <label for="fase">Fase</label>
+    <select id="fase" name="fase">
+      <option value="">Todas</option>
+      {% for f in fases %}<option value="{{ f.id }}" {% if filtros.fase_id == f.id %}selected{% endif %}>{{ f.nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if 'ruta' in reporte.filtros %}
+  <div>
+    <label for="ruta">Tipo de ruta</label>
+    <select id="ruta" name="ruta">
+      <option value="">Todas</option>
+      {% for valor, texto in RUTAS.items() %}<option value="{{ valor }}" {% if filtros.ruta == valor %}selected{% endif %}>{{ texto }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="acciones">
+    <button type="submit" class="secundario">Filtrar</button>
+    {% if filtros.con_fechas or filtros.carrera or filtros.fase_id or filtros.ruta %}
+    <a href="{{ url_for('reportes.ver', slug=reporte.slug, proceso=filtros.proceso.id) }}">Quitar filtros</a>
+    {% endif %}
+  </div>
+</form>
+<p class="nota">{{ resultado.fechas }}
+  {% if resultado.tiempo_real %}Se actualiza cada 30 segundos.{% endif %}
+  Generado el {{ resultado.generado }}.</p>
+
+<dl class="indicadores">
+  {% for etiqueta, valor in resultado.indicadores %}
+  <div class="tarjeta"><dt>{{ etiqueta }}</dt><dd>{{ valor }}</dd></div>
+  {% endfor %}
+</dl>
+
+{% for tabla in resultado.tablas %}
+<section class="separada">
+  <h2>{{ tabla.titulo }}{% if tabla.lista and tabla.filas %} <span class="contador">{{ tabla.filas|length }}</span>{% endif %}</h2>
+  {% if tabla.nota %}<p class="nota">{{ tabla.nota }}</p>{% endif %}
+  {% if tabla.filas %}
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr>{% for columna in tabla.columnas %}<th scope="col">{{ columna }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for fila in tabla.filas[:limite] %}
+    <tr>
+      {% for celda in fila %}
+      {% set columna = tabla.columnas[loop.index0] %}
+      <td {% if not loop.first %}data-etiqueta="{{ columna }}"{% endif %}
+          class="{{ 'numero' if celda is number }} {{ 'sin-corte' if celda.segundos is defined or columna in SIN_CORTE }}">
+        {%- if celda.postulante_id is defined -%}
+        <a href="{{ url_for('ficha.ver', postulante_id=celda.postulante_id) }}">{{ celda }}</a>
+        {%- else -%}{{ celda }}{%- endif -%}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if tabla.filas|length > limite %}<p class="nota">Se muestran las primeras {{ limite }} filas de {{ tabla.filas|length }}. Descargue el reporte para verlas todas.</p>{% endif %}
+  {% else %}
+  <p class="tarjeta nota">{{ tabla.vacio }}</p>
+  {% endif %}
+</section>
+{% endfor %}
+
+<nav class="separada" aria-label="Otros reportes">
+  <h2>Otros reportes</h2>
+  <ul class="otros-reportes">
+    {% for otro in REPORTES.values() if otro.slug != reporte.slug %}
+    <li><a href="{{ url_for('reportes.ver', slug=otro.slug, proceso=filtros.proceso.id) }}">{{ otro.titulo }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block titulo %}Reportes{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <h1>Reportes</h1>
+  {% if procesos|length > 1 %}
+  <form method="get" class="en-linea" aria-label="Proceso">
+    <label for="proceso" class="oculto">Proceso</label>
+    <select id="proceso" name="proceso" onchange="this.form.submit()">
+      {% for p in procesos %}<option value="{{ p.id }}" {% if p.id == filtros.proceso.id %}selected{% endif %}>{{ p.nombre }}</option>{% endfor %}
+    </select>
+    <noscript><button type="submit" class="secundario">Ver</button></noscript>
+  </form>
+  {% endif %}
+</div>
+{% include "reportes/_cabecera.html" %}
+
+<ul class="lista-reportes">
+  {% for reporte in REPORTES.values() %}
+  <li class="tarjeta">
+    <a href="{{ url_for('reportes.ver', slug=reporte.slug, proceso=filtros.proceso.id) }}"><strong>{{ reporte.titulo }}</strong></a>
+    <p class="nota sin-margen">{{ reporte.descripcion }}</p>
+  </li>
+  {% endfor %}
+</ul>
+<p class="nota">Cada reporte se puede filtrar y descargar en Excel o CSV. Las descargas quedan registradas en la auditoría.</p>
+{% endblock %}

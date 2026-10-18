@@ -17,14 +17,17 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     limiter.init_app(app)
 
-    from app.blueprints import admin, auth, bandeja, ficha, iniciar, postulantes, principal, qr, seguimiento
+    from app.blueprints import (
+        admin, auth, bandeja, ficha, iniciar, postulantes, principal, qr, reportes, seguimiento,
+    )
     from app.security import cargar_usuario
     from app.services.bandeja import puede_ver as puede_ver_bandeja
     from app.services.inicio import proceso_activo, puede_iniciar
     from app.services.registro import puede_editar, puede_registrar
+    from app.services.reportes import puede_ver as puede_ver_reportes
 
     app.before_request(cargar_usuario)
-    for blueprint in (auth, principal, admin, iniciar, bandeja, ficha, postulantes, qr, seguimiento):
+    for blueprint in (auth, principal, admin, iniciar, bandeja, ficha, postulantes, reportes, qr, seguimiento):
         app.register_blueprint(blueprint.bp)
 
     @app.context_processor
@@ -39,7 +42,8 @@ def create_app(config_class=Config):
                     and puede_ver_bandeja(usuario, proceso_activo()))
         return {"NOMBRE_ROL": principal.ROLES, "puede_iniciar": _puede_iniciar, "puede_ver_bandeja": _puede_ver_bandeja,
                 "puede_registrar": lambda: puede_registrar(g.get("usuario")),
-                "puede_editar_postulantes": lambda: puede_editar(g.get("usuario"))}
+                "puede_editar_postulantes": lambda: puede_editar(g.get("usuario")),
+                "puede_ver_reportes": lambda: puede_ver_reportes(g.get("usuario"))}
 
     @app.errorhandler(403)
     def _prohibido(_e):

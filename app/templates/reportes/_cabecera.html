@@ -1,0 +1,12 @@
+{% set proceso = filtros.proceso %}
+<p class="nota sin-margen">
+  {{ proceso.nombre }} {{ ui.estado_proceso(proceso) }} ·
+  {% if proceso.datos_eliminados_en %}datos eliminados{% else %}eliminación de los datos programada para el {{ eliminacion }}{% endif %}
+</p>
+{% if aviso_eliminacion %}
+<div class="mensaje mensaje-aviso" role="status">
+  <span class="icono" aria-hidden="true">⚠</span>
+  <span>Los datos de este proceso se eliminarán {% if dias_eliminacion == 0 %}hoy{% elif dias_eliminacion == 1 %}mañana{% else %}en {{ dias_eliminacion }} días{% endif %}
+    ({{ eliminacion }}). Exporte los reportes que necesite conservar.</span>
+</div>
+{% endif %}

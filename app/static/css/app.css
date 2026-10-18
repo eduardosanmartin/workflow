@@ -234,3 +234,14 @@ h3 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
 .fase-actual p { margin: 0; }
 .fase-actual .nota { color: inherit; }
 tr.fila-actual td { background: var(--info-fondo); }
+
+/* ── Reportes ── */
+.lista-reportes { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.lista-reportes .tarjeta { margin: 0; }
+.indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.indicadores .tarjeta { margin: 0; padding: .75rem 1rem; }
+.indicadores dt { font-size: .85rem; color: var(--texto-suave); }
+.indicadores dd { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--primario); }
+td.numero { text-align: right; font-variant-numeric: tabular-nums; }
+.otros-reportes { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; padding: 0; list-style: none; }
+@media (max-width: 640px) { .tabla-apilable td.numero { text-align: left; } }
