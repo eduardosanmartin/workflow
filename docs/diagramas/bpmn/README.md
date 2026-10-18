@@ -4,7 +4,8 @@ Diagramas BPMN 2.0 de la operación completa del sistema (SPEC v0.8). Se abren y
 **Camunda Modeler** (Archivo → Abrir) o en cualquier editor BPMN 2.0 (bpmn.io, Bizagi, etc.).
 Cada `.bpmn` tiene al lado una imagen `.png` de vista previa.
 
-Para compartir, la carpeta `pdf/` tiene cada diagrama en PDF vectorial (A3 horizontal) y
+Para compartir, la carpeta `pdf/` tiene cada diagrama en PDF vectorial (A3 horizontal), con una
+segunda hoja que narra el proceso paso a paso (propósito, participantes, pasos y reglas), y
 `diagramas-bpmn-workflow.pdf`, que reúne los seis con una portada.
 
 Son diagramas **descriptivos**, no ejecutables (`isExecutable="false"`): documentan cómo opera el
