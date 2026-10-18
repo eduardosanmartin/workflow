@@ -2,7 +2,7 @@
 
 import click
 
-from app.services import retencion
+from app.services import demo, retencion
 
 
 def _fila(resultado) -> str:
@@ -30,5 +30,26 @@ def purgar_datos(simular, fecha):
         click.echo("No hay datos con el plazo de conservación vencido.")
 
 
+@click.command("datos-demo")
+@click.option("--eliminar", is_flag=True, help="Elimina el proceso DEMO y sus postulantes de prueba.")
+def datos_demo(eliminar):
+    """Carga un proceso de demostración con usuarios y postulantes de prueba (solo ambientes de prueba)."""
+    try:
+        if eliminar:
+            borrados = demo.eliminar()
+            click.echo(f"Proceso DEMO eliminado ({borrados} expedientes). Los usuarios de prueba quedaron desactivados.")
+            return
+        resumen = demo.crear()
+    except demo.DemoNoPermitidaError as error:
+        raise click.ClickException(str(error)) from None
+    click.echo(f"Listo: «{resumen.proceso.nombre}» activo, con {resumen.expedientes} expedientes en distintos "
+               f"estados y {resumen.cargados} postulantes cargados sin iniciar.")
+    click.echo("Usuarios de prueba (contraseña temporal: se pide cambiarla al primer ingreso):")
+    for nombre, correo, rol, clave in resumen.usuarios:
+        click.echo(f"  {correo:28s} {clave}   {nombre} · {rol}")
+    click.echo("Los correos a los postulantes no se enviaron: aparecen en Reportes › Correos fallidos.")
+
+
 def registrar(app):
     app.cli.add_command(purgar_datos)
+    app.cli.add_command(datos_demo)
