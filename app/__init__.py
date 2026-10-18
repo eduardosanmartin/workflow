@@ -27,6 +27,8 @@ def create_app(config_class=Config):
     from app.services.reportes import puede_ver as puede_ver_reportes
 
     app.before_request(cargar_usuario)
+    from app import cli
+    cli.registrar(app)
     for blueprint in (auth, principal, admin, iniciar, bandeja, ficha, postulantes, reportes, auditoria, qr,
                       seguimiento):
         app.register_blueprint(blueprint.bp)

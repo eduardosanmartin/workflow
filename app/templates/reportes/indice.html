@@ -16,6 +16,37 @@
 </div>
 {% include "reportes/_cabecera.html" %}
 
+{% if conservado %}
+<section class="tarjeta separada">
+  <h2>Totales conservados</h2>
+  <p class="nota">Los datos personales de este proceso se eliminaron al terminar el período lectivo. Se conservan solo
+    estos totales{% if conservado.calculado %}, calculados el {{ conservado.calculado }}{% endif %}; los demás reportes ya no tienen datos.</p>
+  {% if conservado.total %}
+  <dl class="indicadores">
+    <div class="tarjeta"><dt>Matriculados</dt><dd>{{ conservado.total.matriculados }}</dd></div>
+    <div class="tarjeta"><dt>De ellos, por cierre manual</dt><dd>{{ conservado.total.matriculados_cierre_manual }}</dd></div>
+    <div class="tarjeta"><dt>Proceso pendiente</dt><dd>{{ conservado.total.proceso_pendiente }}</dd></div>
+  </dl>
+  {% endif %}
+  {% for titulo, filas, nombre in (('Por carrera de primera preferencia', conservado.carreras, 'carrera'), ('Por fase de cierre o en que quedó detenido', conservado.fases, 'fase')) if filas %}
+  <h3>{{ titulo }}</h3>
+  <div class="tabla-desplazable">
+  <table class="tabla-apilable">
+    <thead><tr><th scope="col">{{ 'Carrera' if nombre == 'carrera' else 'Fase' }}</th><th scope="col">Matriculados</th><th scope="col">Por cierre manual</th><th scope="col">Proceso pendiente</th></tr></thead>
+    <tbody>
+    {% for f in filas %}
+    <tr><td>{% if nombre == 'carrera' %}{{ f.carrera.nombre if f.carrera_id else 'Sin carrera' }}{% else %}{{ f.fase.nombre }}{% endif %}</td>
+      <td data-etiqueta="Matriculados" class="numero">{{ f.matriculados }}</td>
+      <td data-etiqueta="Por cierre manual" class="numero">{{ f.matriculados_cierre_manual }}</td>
+      <td data-etiqueta="Proceso pendiente" class="numero">{{ f.proceso_pendiente }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 <ul class="lista-reportes">
   {% for reporte in REPORTES.values() %}
   <li class="tarjeta">

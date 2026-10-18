@@ -7,7 +7,7 @@ from flask import Blueprint, Response, abort, g, render_template, request
 from app import models as m
 from app.blueprints.admin import NOMBRE_ESTADO
 from app.services import reportes as r
-from app.services import tiempo
+from app.services import retencion, tiempo
 
 bp = Blueprint("reportes", __name__, url_prefix="/reportes")
 
@@ -51,7 +51,8 @@ def indice():
     filtros, vacio = _filtros_o_vacio()
     if vacio:
         return vacio
-    return render_template("reportes/indice.html", **_contexto(filtros))
+    conservado = retencion.resumen(filtros.proceso.id) if filtros.proceso.datos_eliminados_en else None
+    return render_template("reportes/indice.html", conservado=conservado, **_contexto(filtros))
 
 
 @bp.get("/<slug>")

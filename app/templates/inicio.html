@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block titulo %}Inicio{% endblock %}
 {% block contenido %}
+{% for aviso in avisos %}
+<div class="mensaje mensaje-aviso" role="status"><span class="icono" aria-hidden="true">⚠</span><span>{{ aviso }}{% if puede_ver_reportes() %} <a href="{{ url_for('reportes.indice') }}">Ir a reportes</a>{% endif %}</span></div>
+{% endfor %}
 <section class="tarjeta">
   <h1>Hola, {{ g.usuario.nombre }}</h1>
   <p>Ingresó como <strong>{{ NOMBRE_ROL[g.usuario.rol] }}</strong>.</p>

@@ -48,6 +48,7 @@ ACCIONES = {
     "CAMBIAR_ESTADO_CARRERA": "Activación o desactivación de carrera", "ELIMINAR_CARRERA": "Eliminación de carrera",
     "IMPORTAR_CARRERAS": "Importación del catálogo de carreras",
     "EXPORTAR_REPORTE": "Exportación de reporte", "EXPORTAR_AUDITORIA": "Exportación de auditoría",
+    "PURGAR_DATOS": "Eliminación de datos personales (fin del período)",
     # Postulantes y cargas
     "CREAR_POSTULANTE": "Registro de postulante", "EDITAR_POSTULANTE": "Edición de postulante",
     "COMPLETAR_POSTULANTE": "Datos completados en el inicio", "CAMBIAR_ESTADO_POSTULANTE": "Activación o desactivación de postulante",
@@ -65,7 +66,7 @@ ACCIONES_GESTOR = (
     "CREAR_POSTULANTE", "EDITAR_POSTULANTE", "COMPLETAR_POSTULANTE", "CAMBIAR_ESTADO_POSTULANTE", "CONSULTA_RUT_QR",
     "CARGA_MASIVA", "INICIAR_PROCESO", "ATENDER", "FINALIZAR_ATENCION", "DERIVAR_AHORA", "DERIVAR_A_FLUJO",
     "DEVOLVER_A_PRINCIPAL", "CIERRE_MANUAL", "ABANDONO", "REACTIVAR", "CORREGIR_RUTA", "REABRIR_ATENCION",
-    "ENVIAR_CORREO", "REENVIO_QR_LIMITADO",
+    "ENVIAR_CORREO", "REENVIO_QR_LIMITADO", "PURGAR_DATOS",
 )
 ACTORES = {"PUBLICO": "Postulante (QR)", "SISTEMA": "Sistema"}
 

@@ -14,7 +14,7 @@ from peewee import fn
 from app import models as m
 from app.db import db
 from app.security import hash_password
-from app.services import auditoria, recorridos
+from app.services import auditoria, recorridos, retencion
 from app.services import workflow as wf
 
 ROLES = ("ADMIN", "GESTOR", "USUARIO_FASE")
@@ -239,6 +239,7 @@ def cerrar_proceso(proceso_id, por):
         proceso.estado = "CERRADO"
         proceso.fecha_cierre = cierre
         proceso.save()
+        retencion.calcular_resumen(proceso.id, cierre)  # RF-26: totales que sobreviven a la eliminación
         auditoria.registrar("CERRAR_PROCESO", "proceso", proceso.id,
                             anterior={"estado": "ACTIVO"},
                             nuevo={"estado": "CERRADO", "proceso_pendiente": pendientes}, usuario=por)
