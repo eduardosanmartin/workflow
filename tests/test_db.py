@@ -310,3 +310,51 @@ def test_bloqueo_del_expediente_entre_conexiones(base_de_pruebas):
             m.Postulante.delete().where(m.Postulante.id == postulante.id).execute()
             m.Proceso.delete().where(m.Proceso.id == proceso.id).execute()
             m.Usuario.delete().where(m.Usuario.id == usuario.id).execute()
+
+
+def test_dos_inicios_simultaneos_del_mismo_rut_crean_un_solo_expediente(base_de_pruebas):
+    """§11: por QR y por staff a la vez, con dos conexiones reales, el mismo RUT nuevo."""
+    import threading
+
+    import seed_carreras
+    from app import create_app
+    from app.db import db
+    from app.services import inicio
+    from tests.test_inicio import armar_proceso, datos
+
+    app = create_app(TestConfig)
+    with app.app_context(), db.atomic():  # datos confirmados, visibles para otras conexiones
+        seed_carreras.sembrar()
+        admin = m.Usuario.create(email="conc-ini@unach.cl", nombre="Conc", rol="ADMIN", must_change_password=False)
+        armar_proceso(admin, codigo="CONCINI")
+
+    salida = threading.Barrier(2)
+    resultados = []
+
+    def iniciar(via):
+        with app.app_context():
+            db.connect(reuse_if_open=True)
+            try:
+                salida.wait(5)
+                if via == "staff":
+                    inicio.iniciar_por_staff(datos(), {"consultas": []}, admin)
+                else:
+                    inicio.iniciar_por_qr(datos(), [])
+                resultados.append("creado")
+            except (inicio.ExpedienteExistenteError, wf.ReglaVioladaError) as error:
+                resultados.append(type(error).__name__)
+            finally:
+                db.close()
+
+    try:
+        hilos = [threading.Thread(target=iniciar, args=(via,)) for via in ("staff", "qr")]
+        for hilo in hilos:
+            hilo.start()
+        for hilo in hilos:
+            hilo.join(15)
+        assert sorted(resultados) == ["ExpedienteExistenteError", "creado"]
+        assert m.Expediente.select().join(m.Postulante).where(m.Postulante.rut == "12345678-5").count() == 1
+    finally:
+        # Deja la base vacía, como la encuentran las demás pruebas
+        tablas = [t for t in db.get_tables() if t != "schema_migrations"]
+        db.execute_sql(f"TRUNCATE {', '.join(tablas)} RESTART IDENTITY CASCADE")
