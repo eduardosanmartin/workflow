@@ -4,7 +4,10 @@
 {% block contenido %}
 <div class="encabezado">
   <h1>Procesos</h1>
-  <a class="boton primario-corto" href="{{ url_for('admin.proceso_nuevo') }}">Nuevo proceso</a>
+  <div class="acciones-fila">
+    <a class="boton secundario" href="{{ url_for('admin.poster_qr') }}">Póster del QR</a>
+    <a class="boton primario-corto" href="{{ url_for('admin.proceso_nuevo') }}">Nuevo proceso</a>
+  </div>
 </div>
 {% if procesos %}
 <div class="tabla-desplazable">

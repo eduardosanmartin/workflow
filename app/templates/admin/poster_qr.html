@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titulo %}Póster del QR{% endblock %}
+{% block contenido %}
+<div class="no-imprimir">
+  <p class="miga"><a href="{{ url_for('admin.procesos') }}">Procesos</a> › Póster del QR</p>
+  <div class="encabezado">
+    <h1>Póster del QR «Inicia aquí»</h1>
+    <div class="acciones-fila">
+      <a class="boton secundario" href="{{ url_for('admin.poster_qr_svg') }}">Descargar QR (SVG)</a>
+      <button type="button" class="primario-corto" onclick="window.print()">Imprimir</button>
+    </div>
+  </div>
+  {% for aviso in advertencias %}
+  <div class="mensaje mensaje-aviso" role="status"><span class="icono" aria-hidden="true">⚠</span><span>{{ aviso }}</span></div>
+  {% endfor %}
+  <p class="nota">Tamaño carta. El QR lleva siempre al proceso activo, así que el póster sirve de un año a otro; solo hay
+    que reimprimirlo si cambia el dominio. El SVG sirve para incluir el código en otros diseños.</p>
+</div>
+
+<article class="poster" aria-label="Vista previa del póster">
+  <p class="poster-institucion">Universidad Adventista de Chile</p>
+  <h2 class="poster-titulo">Inicia aquí</h2>
+  <p class="poster-subtitulo">tu proceso de matrícula</p>
+  <div class="poster-qr" role="img" aria-label="Código QR al formulario de inicio">{{ qr|safe }}</div>
+  <ol class="poster-pasos">
+    <li>Escanea el código con la cámara de tu celular.</li>
+    <li>Ingresa tu RUT y completa o confirma tus datos.</li>
+    <li>Recibirás tu <strong>número de atención</strong> y un enlace en tu correo.</li>
+    <li>Abre el enlace: te dirá a qué módulo ir y se actualiza solo.</li>
+  </ol>
+  <p class="poster-ayuda">¿No puedes escanear el código? Acércate al módulo de inicio y te ayudamos.</p>
+  <p class="poster-enlace">{{ enlace }}</p>
+  <p class="poster-pie">Tus datos se usan solo para el proceso de matrícula (Ley 19.628).</p>
+</article>
+{% endblock %}

@@ -1,10 +1,10 @@
-"""Pantallas de configuración del Administrador (§10, pantallas 8, 8b, 9, 10 y 13)."""
+"""Pantallas de configuración del Administrador (§10, pantallas 8, 8b, 9, 10, 13 y 16)."""
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, url_for
 
 from app import models as m
 from app.security import requiere_rol
-from app.services import catalogo
+from app.services import catalogo, poster
 from app.services import configuracion as cfg
 from app.services import workflow as wf
 
@@ -427,3 +427,18 @@ def carreras_importar():
     flash(f"Catálogo importado: {resultado['creadas']} nuevas, {resultado['actualizadas']} actualizadas, "
           f"{resultado['sin_cambios']} sin cambios y {len(resultado['errores'])} con errores.", "exito")
     return _carreras(resultado=resultado)
+
+
+# ── Póster del QR "Inicia aquí" (pantalla 16) ──
+
+@bp.get("/poster-qr")
+def poster_qr():
+    enlace = poster.enlace()
+    return render_template("admin/poster_qr.html", enlace=enlace, qr=poster.svg(enlace),
+                           advertencias=poster.advertencias(enlace))
+
+
+@bp.get("/poster-qr/qr.svg")
+def poster_qr_svg():
+    return Response(poster.svg(poster.enlace()), mimetype="image/svg+xml",
+                    headers={"Content-Disposition": "attachment; filename=qr_inicia_aqui.svg"})
