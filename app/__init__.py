@@ -1,7 +1,7 @@
 import logging
 
 from flask import Flask, g, render_template
-from peewee import OperationalError
+from peewee import IntegrityError, OperationalError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app import db
@@ -77,5 +77,8 @@ def _crear_superadmin(config):
             asegurar_superadmin(config)
     except OperationalError as e:
         log.warning("No se pudo verificar el super administrador (¿base de datos detenida?): %s", e)
+    except IntegrityError:
+        # Otro worker de Gunicorn lo creó al mismo tiempo (primer arranque)
+        log.info("Super administrador creado por otro proceso")
     except ValueError as e:
         log.error("Super administrador no creado: %s", e)
