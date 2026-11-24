@@ -45,6 +45,17 @@
     return datos.llamando[0] || null;
   }
 
+  function ajustarAlAncho(nodo) {
+    // Si el número no cabe en una línea, se achica hasta que quepa
+    nodo.style.fontSize = "";
+    var disponible = elActual.clientWidth * 0.94;
+    var tamano = parseFloat(getComputedStyle(nodo).fontSize);
+    while (nodo.scrollWidth > disponible && tamano > 24) {
+      tamano *= 0.92;
+      nodo.style.fontSize = tamano + "px";
+    }
+  }
+
   function dibujar(datos) {
     elProceso.textContent = datos.proceso || "";
     var grande = principal(datos);
@@ -59,7 +70,9 @@
       elActual.textContent = "Espere su número en pantalla";
     } else {
       elActual.className = "actual" + (elActual.dataset.destello === grande.clave ? " destello" : "");
-      elActual.appendChild(el("div", "numero", grande.numero));
+      var numero = el("div", "numero", grande.numero);
+      elActual.appendChild(numero);
+      ajustarAlAncho(numero);
       elActual.appendChild(el("div", "fase", grande.fase));
       elActual.appendChild(el("div", "modulo", "Módulo " + grande.modulo));
       if (grande.aviso > 1) {
@@ -214,6 +227,7 @@
   document.getElementById("boton-sin-sonido").addEventListener("click", function () { comenzar(false); });
 
   // El sondeo empieza al activar la pantalla: los avisos de los últimos segundos se anuncian
+  window.addEventListener("resize", function () { dibujar(ultimo); });
   dibujar(ultimo);
   reloj();
   setInterval(reloj, 15000);
