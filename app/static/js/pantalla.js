@@ -167,7 +167,7 @@
   // ── Sondeo ──
 
   function actualizar() {
-    fetch(url, { cache: "no-store", credentials: "omit" })
+    fetch(url, { cache: "no-store", credentials: "same-origin" })  // incluye el acceso básico del portero, si lo hay
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (datos) {
         elConexion.hidden = true;
