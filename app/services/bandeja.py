@@ -10,7 +10,7 @@ from peewee import fn
 
 from app import models as m
 from app.db import db
-from app.services import auditoria, correo, recorridos, tiempo
+from app.services import auditoria, correo, llamados, recorridos, tiempo
 from app.services import workflow as wf
 from app.services.inicio import consultas_numeradas, numero_visible, opciones_de_flujo
 
@@ -37,7 +37,7 @@ def puede_ver(usuario, proceso) -> bool:
     return bool(fases_del_usuario(usuario, proceso))
 
 
-def _exigir_permiso(usuario, fase_id):
+def exigir_permiso(usuario, fase_id):
     asignadas = set()
     if usuario.rol == "USUARIO_FASE":
         asignadas = {fila.fase_id for fila in m.FaseResponsable.select().where(m.FaseResponsable.usuario == usuario.id)}
@@ -94,6 +94,7 @@ def listar(usuario, proceso, fase_id=None, fecha=None, carrera=None, ahora=None)
         return listas
 
     contexto = _Contexto(proceso, involucrados, ahora)
+    contexto.llamados = llamados.abiertos([a.id for a in activas if a.estado == wf.EN_ESPERA])
     for atencion in activas:
         clave = "en_espera" if atencion.estado == wf.EN_ESPERA else "en_atencion"
         listas[clave].append(contexto.fila(atencion))
@@ -118,6 +119,7 @@ class _Contexto:
             self.rutas.setdefault(atencion.expediente_id, []).append(atencion)
         ids_usuario = {a.atendido_por_id for ruta in self.rutas.values() for a in ruta if a.atendido_por_id}
         self.usuarios = {u.id: u.nombre for u in m.Usuario.select().where(m.Usuario.id.in_(ids_usuario))} if ids_usuario else {}
+        self.llamados = {}
 
     def _nombre_fase(self, fase_id):
         return self.estructura.fase(fase_id).nombre
@@ -157,6 +159,21 @@ class _Contexto:
             "final_manual": flujo is not None and atencion.fase_id == flujo.fase_final_id,
             "via_qr": expediente.via_inicio == "QR",
             "ruta_propuesta": planificadas if es_inicial else [],
+            "llamado": self._llamado(atencion),
+        }
+
+    def _llamado(self, atencion):
+        llamado = self.llamados.get(atencion.id)
+        if llamado is None:
+            return None
+        return {
+            "modulo": llamado.modulo,
+            "por": llamado.usuario.nombre if llamado.usuario_id else None,
+            "usuario_id": llamado.usuario_id,
+            "aviso": llamados.aviso(llamado, self.ahora),
+            "avisos": llamados.MAX_AVISOS,
+            "sin_respuesta": llamados.sin_respuesta(llamado, self.ahora),
+            "desde": tiempo.hora_local(llamado.llamado_en),
         }
 
 
@@ -165,7 +182,7 @@ class _Contexto:
 def detalle(expediente_id, usuario) -> dict:
     expediente, rec = recorridos.cargar(expediente_id, bloquear=False)
     actual = rec._exigir_actual()
-    _exigir_permiso(usuario, actual.fase_id)
+    exigir_permiso(usuario, actual.fase_id)
     estructura = rec.estructura
     fase = estructura.fase(actual.fase_id)
     flujo = estructura.flujo(rec.flujo_alternativo_id) if rec.en_flujo_alternativo else None
@@ -256,6 +273,7 @@ def operar_auditado(expediente_id, usuario, accion, cambio, version=None) -> str
     with db.atomic():
         expediente, rec, (antes, extra) = recorridos.ejecutar(expediente_id, operacion, version)
         accion = extra.pop("accion", accion)
+        llamados.cerrar_del_expediente(expediente.id, m.ahora())  # sale de la pantalla del hall
         auditoria.registrar(accion, "expediente", expediente.id, antes, {**_foto(rec), **extra}, usuario)
     if antes["estado"] != wf.MATRICULADO and rec.estado == wf.MATRICULADO:
         correo.enviar_matricula(expediente)  # RF-21, después de confirmar la transacción
@@ -266,7 +284,7 @@ def _operar(expediente_id, version, usuario, accion, cambio) -> str:
     """Acción sobre la atención actual: exige la versión vista y ser responsable de la fase."""
     def con_permiso(rec):
         actual = rec._exigir_actual()
-        _exigir_permiso(usuario, actual.fase_id)
+        exigir_permiso(usuario, actual.fase_id)
         origen = rec.estructura.fase(actual.fase_id).nombre
         return {"origen": origen, **(cambio(rec) or {})}
 

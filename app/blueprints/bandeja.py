@@ -5,7 +5,7 @@ from datetime import date
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from app.security import destino_seguro
-from app.services import bandeja, inicio
+from app.services import bandeja, inicio, llamados
 from app.services import workflow as wf
 
 bp = Blueprint("bandeja", __name__, url_prefix="/bandeja")
@@ -77,6 +77,38 @@ def atender(expediente_id):
         flash(bandeja.atender(expediente_id, request.form.get("version"), g.usuario), "exito")
     except wf.ReglaVioladaError as error:
         _abortar_si_corresponde(error)
+        flash(error.mensaje, "error")
+    return redirect(_volver())
+
+
+@bp.post("/<int:expediente_id>/llamar")
+def llamar(expediente_id):
+    """Llama al postulante a la pantalla del hall, o lo vuelve a llamar."""
+    try:
+        flash(llamados.llamar(expediente_id, g.usuario), "exito")
+    except wf.ReglaVioladaError as error:
+        _abortar_si_corresponde(error)
+        flash(error.mensaje, "error")
+    return redirect(_volver())
+
+
+@bp.post("/<int:expediente_id>/cancelar-llamado")
+def cancelar_llamado(expediente_id):
+    try:
+        flash(llamados.cancelar(expediente_id, g.usuario), "exito")
+    except wf.ReglaVioladaError as error:
+        _abortar_si_corresponde(error)
+        flash(error.mensaje, "error")
+    return redirect(_volver())
+
+
+@bp.post("/modulo")
+def modulo():
+    """El usuario indica en qué módulo atiende: es lo que anuncia la pantalla del hall."""
+    try:
+        valor = llamados.guardar_modulo(g.usuario, request.form.get("modulo"))
+        flash(f"Su módulo es el {valor}" if valor else "Se quitó su módulo", "exito")
+    except wf.ReglaVioladaError as error:
         flash(error.mensaje, "error")
     return redirect(_volver())
 

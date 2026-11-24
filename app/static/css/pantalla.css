@@ -1,0 +1,107 @@
+/* Pantalla de llamados del hall de espera: pensada para un televisor horizontal, se lee a distancia. */
+:root {
+  --fondo: #0a2340;
+  --panel: #10325a;
+  --borde: #1f4b7d;
+  --texto: #ffffff;
+  --texto-suave: #b9cbe2;
+  --acento: #ffc83d;
+  --acento-texto: #1a1300;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 16px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+
+.pantalla { display: flex; flex-direction: column; height: 100vh; padding: 2vh 2.5vw; gap: 2vh; }
+
+.cabecera { display: flex; align-items: baseline; gap: 2vw; font-size: clamp(1rem, 2.2vw, 2.2rem); }
+.marca { font-weight: 800; }
+.proceso { color: var(--texto-suave); flex: 1; }
+.reloj { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.cuerpo { flex: 1; display: grid; grid-template-columns: 3fr 2fr; gap: 2.5vw; min-height: 0; }
+.titulo-seccion {
+  margin: 0 0 1.5vh; font-size: clamp(1rem, 1.8vw, 1.8rem); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--texto-suave);
+}
+
+/* ── Llamado principal ── */
+.llamado { display: flex; flex-direction: column; min-height: 0; }
+.actual {
+  flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  background: var(--panel); border: 2px solid var(--borde); border-radius: 2vw; padding: 2vh 2vw;
+}
+.actual .numero {
+  font-size: clamp(4rem, 15vw, 16rem); font-weight: 900; line-height: 1; letter-spacing: .03em;
+  color: var(--acento); font-variant-numeric: tabular-nums;
+}
+.actual .fase { font-size: clamp(2rem, 5.5vw, 6rem); font-weight: 800; margin-top: 2vh; }
+.actual .modulo {
+  display: inline-block; margin-top: 2vh; padding: .3em .9em; border-radius: 999px;
+  background: var(--acento); color: var(--acento-texto);
+  font-size: clamp(1.6rem, 4.2vw, 4.5rem); font-weight: 900;
+}
+.actual .repeticion { margin-top: 1.5vh; font-size: clamp(1rem, 1.6vw, 1.6rem); color: var(--texto-suave); }
+.actual.vacio-llamado { color: var(--texto-suave); font-size: clamp(1.5rem, 3vw, 3rem); }
+.actual.destello { animation: destello 1s ease-in-out 3; }
+@keyframes destello {
+  0%, 100% { background: var(--panel); }
+  50% { background: #1d5a9c; border-color: var(--acento); }
+}
+
+.otros { list-style: none; margin: 2vh 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 1vw; }
+.otros li {
+  background: var(--panel); border: 1px solid var(--borde); border-radius: 1vw; padding: 1vh 1.5vw;
+  font-size: clamp(1rem, 2vw, 2.2rem);
+}
+.otros strong { color: var(--acento); margin-right: .5em; }
+
+/* ── En atención ── */
+.atendiendo { min-height: 0; overflow: hidden; }
+.atendiendo table { width: 100%; border-collapse: collapse; font-size: clamp(1rem, 2.1vw, 2.4rem); }
+.atendiendo th {
+  text-align: left; font-size: .55em; color: var(--texto-suave); font-weight: 600;
+  padding: 0 .5em .5em; border-bottom: 2px solid var(--borde);
+}
+.atendiendo td { padding: .45em .5em; border-bottom: 1px solid var(--borde); }
+.atendiendo td:first-child { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.atendiendo td:last-child { font-weight: 700; white-space: nowrap; }
+.vacio { color: var(--texto-suave); font-size: clamp(1rem, 1.8vw, 1.8rem); }
+
+.conexion {
+  position: fixed; right: 2vw; bottom: 2vh; margin: 0; padding: .5em 1em; border-radius: 999px;
+  background: #8a1414; color: #fff; font-weight: 700;
+}
+
+/* ── Activación del sonido (una vez, al encender la pantalla) ── */
+.activar {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+  background: rgba(5, 18, 34, .92); font-size: clamp(1rem, 1.8vw, 1.6rem); padding: 1rem;
+}
+.activar[hidden] { display: none; }
+.activar-titulo { font-size: 1.6em; font-weight: 800; margin: 0 0 .5em; }
+.activar button {
+  font: inherit; font-weight: 800; cursor: pointer; padding: .7em 1.6em; border: 0; border-radius: 999px;
+  background: var(--acento); color: var(--acento-texto); margin-top: .5em;
+}
+.activar button.sin-sonido { background: none; color: var(--texto-suave); text-decoration: underline; font-weight: 400; padding: .3em; }
+button:focus-visible { outline: 4px solid #fff; outline-offset: 3px; }
+
+/* Pantallas verticales o angostas: una columna */
+@media (max-aspect-ratio: 1/1) {
+  body { overflow: auto; }
+  .pantalla { height: auto; min-height: 100vh; }
+  .cuerpo { grid-template-columns: 1fr; }
+  .actual { min-height: 45vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actual.destello { animation: none; border-color: var(--acento); }
+}

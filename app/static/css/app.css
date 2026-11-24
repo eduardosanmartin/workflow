@@ -274,3 +274,11 @@ details summary { cursor: pointer; color: var(--primario); }
   .contenido { max-width: none; margin: 0; padding: 0; }
   .poster { border: 0; margin: 0 auto; padding: 4mm 8mm; }
 }
+
+/* ── Llamados al módulo (bandeja) ── */
+.modulo-propio { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: end; padding: 1rem 1.5rem; margin-bottom: 1rem; }
+.modulo-propio label { margin-top: 0; }
+.modulo-propio input { width: 8rem; }
+.modulo-propio .nota { flex: 1 1 260px; margin: 0; }
+.insignia-llamado { background: var(--info-fondo); color: var(--info-texto); }
+.insignia-sin-respuesta { background: var(--aviso-fondo); color: var(--aviso-texto); }

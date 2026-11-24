@@ -60,12 +60,21 @@ Su herramienta es la **Bandeja** (menú **Bandeja**). Se actualiza sola cada 10 
 - **En atención:** los que está atendiendo usted u otro responsable.
 - **Próximos:** los que vienen a su fase después de la actual.
 
+**Su módulo:** al comienzo de la jornada, escriba en **Mi módulo** (arriba en la bandeja) el
+número del puesto donde atiende y presione **Guardar**. Si cambia de puesto, actualícelo.
+
 **Atender a un postulante:**
-1. Llame al número de atención y presione **Atender**. Así se mide el tiempo de espera y el
-   de atención.
-2. Al terminar, presione **Finalizar y derivar** y elija el resultado: **Completado** o
+1. Presione **Llamar**: la pantalla del hall muestra en grande su número, la fase y su
+   módulo (ej.: «M-0016 · Finanzas · Módulo 4») y lo anuncia con un sonido y una voz. Si no
+   se presenta, el llamado se repite cada 30 segundos, hasta 3 veces; la fila muestra
+   «Llamado 2 de 3» y, después, «No se presentó». Puede **Volver a llamar** o **Cancelar
+   llamado** (sigue en espera, en su lugar de la fila).
+2. Cuando llegue, presione **Atender**. Así se mide el tiempo de espera y el de atención, y
+   en la pantalla pasa a «En atención» con su módulo. Si ya está frente a usted, puede
+   presionar **Atender** sin llamarlo.
+3. Al terminar, presione **Finalizar y derivar** y elija el resultado: **Completado** o
    **Completado con observaciones** (la observación es obligatoria y el postulante no la ve).
-3. En **¿Cómo sigue?**, elija:
+4. En **¿Cómo sigue?**, elija:
    - **Continuar la ruta:** pasa a la siguiente fase. Puede agregar, quitar o reordenar las
      fases de consulta pendientes; MNP siempre queda al final.
    - **Derivar ahora:** lo envía a otra fase de consulta sin terminar su atención. Su fase se
@@ -86,6 +95,18 @@ La secuencia de fases es fija: **Finalizar** lo pasa a la fase siguiente del flu
 número de boleta) y confírmelo. El postulante queda Matriculado.
 
 Si el caso cambia, use **Devolver al flujo principal**, con el motivo y la nueva ruta.
+
+### Pantalla del hall de espera
+
+Abra `https://<servidor>/pantalla/` en el televisor del hall (no requiere iniciar sesión: solo
+muestra números de atención, fases y módulos, nunca nombres ni RUT).
+
+- Al abrirla, presione **Activar sonido y voz**: los navegadores solo reproducen sonido
+  después de un clic. Si el equipo se reinicia, hay que volver a presionarlo. En un equipo
+  dedicado puede evitarse abriendo Chrome con
+  `--kiosk --autoplay-policy=no-user-gesture-required`.
+- La voz usa la que trae el equipo en español; si no tiene ninguna, suena solo la campanilla.
+- Si dos responsables de una misma fase llaman a la vez, cada uno aparece con su módulo.
 
 ---
 

@@ -42,6 +42,7 @@ class Usuario(Base):
     bloqueado_hasta = DateTimeField(null=True)
     activo = BooleanField(default=True)
     creado_en = DateTimeField(default=ahora)
+    modulo = CharField(max_length=20, null=True)
 
 
 class Proceso(Base):
@@ -172,6 +173,14 @@ class Atencion(Base):
     version = IntegerField(default=1)
 
 
+class Llamado(Base):
+    atencion = ForeignKeyField(Atencion, backref="llamados", on_delete="CASCADE")
+    usuario = ForeignKeyField(Usuario, null=True, on_delete="SET NULL")
+    modulo = CharField(max_length=20)
+    llamado_en = DateTimeField(default=ahora)
+    cerrado_en = DateTimeField(null=True)
+
+
 class EnvioCorreo(Base):
     expediente = ForeignKeyField(Expediente, backref="envios", on_delete="CASCADE")
     tipo = CharField(max_length=12)
@@ -210,6 +219,6 @@ class Auditoria(Base):
 
 TODOS = [
     Usuario, Proceso, Fase, FlujoAlternativo, FlujoAlternativoFase, FaseResponsable, Carrera,
-    CargaMasiva, Postulante, PostulanteCarrera, Expediente, Atencion, EnvioCorreo,
+    CargaMasiva, Postulante, PostulanteCarrera, Expediente, Atencion, Llamado, EnvioCorreo,
     ProcesoResumen, Auditoria,
 ]

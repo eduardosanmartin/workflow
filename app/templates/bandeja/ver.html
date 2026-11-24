@@ -7,6 +7,20 @@
   {% if puede_iniciar() %}<a class="boton primario-corto" href="{{ url_for('iniciar.rut') }}">Iniciar proceso</a>{% endif %}
 </div>
 
+<form method="post" action="{{ url_for('bandeja.modulo') }}" class="tarjeta modulo-propio" aria-label="Módulo de atención">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="volver" value="{{ volver }}">
+  <div>
+    <label for="modulo">Mi módulo</label>
+    <input id="modulo" name="modulo" type="text" maxlength="20" value="{{ g.usuario.modulo or '' }}" placeholder="Ej.: 4"
+           aria-describedby="ayuda-modulo">
+  </div>
+  <button type="submit" class="secundario">Guardar</button>
+  <p class="nota" id="ayuda-modulo">Al llamar a un postulante, la
+    <a href="{{ url_for('pantalla.ver') }}" target="_blank" rel="noopener">pantalla del hall</a>
+    le indicará dirigirse a su fase y a este módulo.</p>
+</form>
+
 <form method="get" action="{{ url_for('bandeja.ver') }}" class="tarjeta filtros" aria-label="Filtros de la bandeja">
   {% if fases|length > 1 %}
   <div>

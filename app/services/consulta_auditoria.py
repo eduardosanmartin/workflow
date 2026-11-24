@@ -24,7 +24,7 @@ MAXIMO_EXPORTACION = 50000
 
 ENTIDADES = {
     "expediente": "Expediente", "postulante": "Postulante", "carga_masiva": "Carga masiva",
-    "proceso": "Proceso", "fase": "Fase", "flujo_alternativo": "Flujo alternativo", "carrera": "Carrera",
+    "proceso": "Proceso", "fase": "Fase", "modulo": "Módulo", "flujo_alternativo": "Flujo alternativo", "carrera": "Carrera",
     "usuario": "Usuario",
 }
 ENTIDADES_GESTOR = ("expediente", "postulante", "carga_masiva")
@@ -54,7 +54,8 @@ ACCIONES = {
     "COMPLETAR_POSTULANTE": "Datos completados en el inicio", "CAMBIAR_ESTADO_POSTULANTE": "Activación o desactivación de postulante",
     "CONSULTA_RUT_QR": "Consulta de RUT en el formulario QR", "CARGA_MASIVA": "Carga masiva",
     # Expedientes
-    "INICIAR_PROCESO": "Inicio de proceso", "ATENDER": "Atender", "FINALIZAR_ATENCION": "Finalizar y derivar",
+    "INICIAR_PROCESO": "Inicio de proceso", "LLAMAR": "Llamado a módulo", "VOLVER_A_LLAMAR": "Nuevo llamado a módulo",
+    "CANCELAR_LLAMADO": "Llamado cancelado", "ATENDER": "Atender", "FINALIZAR_ATENCION": "Finalizar y derivar",
     "DERIVAR_AHORA": "Derivar ahora", "DERIVAR_A_FLUJO": "Derivación a flujo alternativo",
     "DEVOLVER_A_PRINCIPAL": "Devolución al flujo principal", "CIERRE_MANUAL": "Cierre manual de matrícula",
     "ABANDONO": "Abandonó", "REACTIVAR": "Reactivación", "CORREGIR_RUTA": "Corrección de ruta",
@@ -64,7 +65,7 @@ ACCIONES = {
 # Acciones sobre expedientes, postulantes y cargas: las que ve el Gestor
 ACCIONES_GESTOR = (
     "CREAR_POSTULANTE", "EDITAR_POSTULANTE", "COMPLETAR_POSTULANTE", "CAMBIAR_ESTADO_POSTULANTE", "CONSULTA_RUT_QR",
-    "CARGA_MASIVA", "INICIAR_PROCESO", "ATENDER", "FINALIZAR_ATENCION", "DERIVAR_AHORA", "DERIVAR_A_FLUJO",
+    "CARGA_MASIVA", "INICIAR_PROCESO", "LLAMAR", "VOLVER_A_LLAMAR", "CANCELAR_LLAMADO", "ATENDER", "FINALIZAR_ATENCION", "DERIVAR_AHORA", "DERIVAR_A_FLUJO",
     "DEVOLVER_A_PRINCIPAL", "CIERRE_MANUAL", "ABANDONO", "REACTIVAR", "CORREGIR_RUTA", "REABRIR_ATENCION",
     "ENVIAR_CORREO", "REENVIO_QR_LIMITADO", "PURGAR_DATOS",
 )

@@ -1102,7 +1102,6 @@ stateDiagram-v2
 - **Clonar proceso:** crear "Matrícula 2027" a partir de "Matrícula 2026". Es especialmente útil porque la estructura de un proceso iniciado no se puede modificar.
 - Correo al postulante en cada cambio de fase.
 - Notificaciones por SMS o WhatsApp.
-- Pantalla de llamado de turnos (TV) con el número de atención.
 - Tiempos objetivo de espera y de atención por fase, con alertas en la bandeja y en los reportes.
 - Integración con el sistema académico o financiero para completar fases automáticamente (ej.: Finanzas, al confirmarse un pago).
 
