@@ -23,8 +23,8 @@ rol y los pasos típicos de un día de matrícula.
 Si el caso no puede terminar en MNP (ej.: pago en efectivo), se deriva a un **flujo
 alternativo**: una secuencia fija de fases que termina con un **cierre manual**.
 
-En su celular, el postulante ve a qué fase dirigirse. La página se actualiza sola cada 10
-segundos.
+En su celular, el postulante ve a qué fase dirigirse y, cuando lo llaman, a qué módulo
+(*"Dirígete a: Becas, Módulo 3"*). La página se actualiza sola cada 10 segundos.
 
 ---
 

@@ -72,6 +72,26 @@ def cerrar_del_expediente(expediente_id, ahora):
             .execute())
 
 
+def modulo_de(atencion):
+    """Módulo al que debe ir el postulante en su atención actual, o None si aún no lo sabe.
+
+    En espera: el del llamado abierto (antes de que lo llamen espera en el hall). En atención:
+    el del último llamado; si lo atendieron sin llamarlo, el módulo que tiene hoy quien atiende.
+    """
+    if atencion.estado == wf.EN_ESPERA:
+        llamado = abiertos([atencion.id]).get(atencion.id)
+        return llamado.modulo if llamado else None
+    if atencion.estado == wf.EN_ATENCION:
+        ultimo = (m.Llamado.select(m.Llamado.modulo).where(m.Llamado.atencion == atencion.id)
+                  .order_by(m.Llamado.llamado_en.desc(), m.Llamado.id.desc()).first())
+        if ultimo:
+            return ultimo.modulo
+        if atencion.atendido_por_id:
+            atiende = m.Usuario.get_or_none(m.Usuario.id == atencion.atendido_por_id)
+            return atiende.modulo if atiende else None
+    return None
+
+
 # ── Acciones del responsable ────────────────────────────────────────
 
 def _atencion_en_espera(expediente_id, usuario):

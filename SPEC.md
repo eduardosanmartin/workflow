@@ -460,7 +460,7 @@ Cierre manual:
 - Las carreras de interés.
 - Su recorrido, con:
   - Las fases ya completadas, marcadas con ✓.
-  - La **fase actual**, destacada, con una instrucción clara: *"Dirígete a: Becas"* si está `EN_ESPERA`, o *"Estás siendo atendido en: Becas"* si está `EN_ATENCION`.
+  - La **fase actual**, destacada, con una instrucción clara: *"Dirígete a: Becas"* si está `EN_ESPERA`, o *"Estás siendo atendido en: Becas"* si está `EN_ATENCION`. Si lo llamaron a un módulo, se agrega: *"Dirígete a: Becas, Módulo 3"*; en atención, el módulo del último llamado o, si lo atendieron sin llamarlo, el de quien lo atiende.
   - La **fase siguiente** y el resto de la ruta planificada.
   - No se muestran las fases de consulta que no están en su ruta, ni las observaciones internas, ni los nombres de los responsables.
 - Un mensaje persistente (fijo en pantalla):

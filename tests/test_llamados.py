@@ -230,3 +230,37 @@ def test_bandeja_llamar_cancelar_y_modulo(app):
     with app.app_context():
         assert m.Llamado.get().cerrado_en is not None
         assert m.Atencion.get_by_id(m.Llamado.get().atencion_id).estado == wf.EN_ESPERA
+
+
+# ── Seguimiento del postulante ──
+
+def instruccion(expediente):
+    from app.services import seguimiento
+    return seguimiento.vista(m.Expediente.get_by_id(expediente.id))["instruccion"]
+
+
+def test_el_movil_indica_el_modulo_al_ser_llamado(admin, proceso, becas):
+    from app.services import seguimiento
+    expediente = iniciar(admin, consultas=["BEC"])
+    token = expediente.token_seguimiento
+    assert instruccion(expediente) == "Dirígete a: Becas"  # espera en el hall
+    antes = seguimiento.firma(token)
+    llamados.llamar(expediente.id, becas, ahora=T0)
+    assert seguimiento.firma(token) != antes  # el sondeo de 10 s lo nota
+    assert instruccion(expediente) == "Dirígete a: Becas, Módulo 4"
+    llamados.cancelar(expediente.id, becas, ahora=en(5))
+    assert instruccion(expediente) == "Dirígete a: Becas"
+
+
+def test_el_movil_indica_el_modulo_en_atencion(admin, proceso, becas):
+    expediente = iniciar(admin, consultas=["BEC"])
+    llamados.llamar(expediente.id, becas, ahora=T0)
+    llamados.guardar_modulo(becas, "9")  # vale el módulo del llamado
+    bandeja.atender(expediente.id, version(expediente), becas, ahora=en(10))
+    assert instruccion(expediente) == "Estás siendo atendido en: Becas, Módulo 4"
+
+
+def test_atendido_sin_llamar_el_movil_indica_el_modulo_de_quien_atiende(admin, proceso, becas):
+    expediente = iniciar(admin, consultas=["BEC"])
+    bandeja.atender(expediente.id, version(expediente), becas, ahora=T0)
+    assert instruccion(expediente) == "Estás siendo atendido en: Becas, Módulo 4"
