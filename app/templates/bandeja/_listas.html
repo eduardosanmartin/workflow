@@ -23,10 +23,30 @@
       <td data-etiqueta="Postulante">{{ nombre(f) }}</td>
       {% if varias_fases %}<td data-etiqueta="Fase">{{ f.fase }}</td>{% endif %}
       <td data-etiqueta="Viene de">{{ f.viene_de or '—' }}</td>
-      <td data-etiqueta="Esperando">{{ f.espera }}</td>
+      <td data-etiqueta="Esperando">{{ f.espera }}
+        {% if f.llamado %}<br>
+          {% if f.llamado.sin_respuesta %}
+          <span class="insignia insignia-sin-respuesta">No se presentó · {{ f.llamado.avisos }} llamados</span>
+          {% else %}
+          <span class="insignia insignia-llamado">Llamado {{ f.llamado.aviso }} de {{ f.llamado.avisos }}</span>
+          {% endif %}
+          <br><small>Módulo {{ f.llamado.modulo }}{% if f.llamado.por %} · {{ f.llamado.por }}{% endif %} · {{ f.llamado.desde }}</small>
+        {% endif %}
+      </td>
       <td class="acciones-fila">
+        {% if not f.llamado %}
+        {{ ui.boton_post(url_for('bandeja.llamar', expediente_id=f.expediente_id), 'Llamar', 'secundario sin-margen',
+                         {'volver': volver}) }}
+        {% elif f.llamado.usuario_id == g.usuario.id or f.llamado.sin_respuesta %}
+        {{ ui.boton_post(url_for('bandeja.llamar', expediente_id=f.expediente_id), 'Volver a llamar', 'secundario sin-margen',
+                         {'volver': volver}) }}
+        {% endif %}
         {{ ui.boton_post(url_for('bandeja.atender', expediente_id=f.expediente_id), 'Atender', 'primario-corto sin-margen',
                          {'version': f.version, 'volver': volver}) }}
+        {% if f.llamado %}
+        {{ ui.boton_post(url_for('bandeja.cancelar_llamado', expediente_id=f.expediente_id), 'Cancelar llamado', 'enlace',
+                         {'volver': volver}) }}
+        {% endif %}
         {{ finalizar(f) }}
         <a class="enlace-peligro" href="{{ url_for('bandeja.abandono_form', expediente_id=f.expediente_id, volver=volver) }}">Abandonó</a>
       </td>

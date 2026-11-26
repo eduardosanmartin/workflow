@@ -8,7 +8,7 @@ import hashlib
 
 from app import models as m
 from app.db import db
-from app.services import recorridos
+from app.services import llamados, recorridos
 from app.services import workflow as wf
 from app.services.inicio import datos_de, nombres_de_carrera, numero_visible
 from app.services.postulantes import CARRERAS
@@ -19,13 +19,17 @@ _OCULTAS = (wf.DERIVADA, wf.ABANDONADA)
 
 
 # RNF-04: el sondeo cada 10 s de miles de postulantes resuelve con una sola consulta si algo
-# cambió (estado del expediente y del proceso, datos del postulante y cada atención de la ruta).
-# Solo cuando cambia se arma la vista completa.
+# cambió (estado del expediente y del proceso, datos del postulante, cada atención de la ruta
+# con el módulo de quien atiende, y los llamados a módulo). Solo cuando cambia se arma la vista.
 _FIRMA = """
 SELECT e.estado, p.estado, po.actualizado_en,
-       (SELECT string_agg(a.id || ':' || a.secuencia || ':' || a.estado || ':' || a.version, ','
-                          ORDER BY a.secuencia)
-          FROM atencion a WHERE a.expediente_id = e.id)
+       (SELECT string_agg(a.id || ':' || a.secuencia || ':' || a.estado || ':' || a.version
+                          || ':' || coalesce((SELECT u.modulo FROM usuario u WHERE u.id = a.atendido_por), ''),
+                          ',' ORDER BY a.secuencia)
+          FROM atencion a WHERE a.expediente_id = e.id),
+       (SELECT string_agg(l.id || ':' || l.modulo || ':' || l.llamado_en || ':' || coalesce(l.cerrado_en::text, ''),
+                          ',' ORDER BY l.id)
+          FROM llamado l JOIN atencion a ON a.id = l.atencion_id WHERE a.expediente_id = e.id)
   FROM expediente e
   JOIN proceso p ON p.id = e.proceso_id
   JOIN postulante po ON po.id = e.postulante_id
@@ -73,6 +77,9 @@ def vista(expediente) -> dict:
     instruccion = None
     if actual is not None:
         nombre = recorrido.estructura.fase(actual.fase_id).nombre
+        modulo = llamados.modulo_de(m.Atencion.get_by_id(actual.id))
+        if modulo:
+            nombre = f"{nombre}, Módulo {modulo}"
         instruccion = (f"Estás siendo atendido en: {nombre}" if actual.estado == wf.EN_ATENCION
                        else f"Dirígete a: {nombre}")
     return {

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Pantalla de llamados · UNACH</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pantalla.css') }}">
+  <script src="{{ url_for('static', filename='js/pantalla.js') }}" defer></script>
+</head>
+<body>
+  <div class="pantalla" id="pantalla" data-estado="{{ url_for('pantalla.estado') }}">
+    <header class="cabecera">
+      <span class="marca">Matrícula UNACH</span>
+      <span class="proceso" id="proceso">{{ proceso or '' }}</span>
+      <span class="reloj" id="reloj" aria-hidden="true"></span>
+    </header>
+
+    <main class="cuerpo">
+      <section class="llamado" aria-labelledby="t-llamado">
+        <h1 id="t-llamado" class="titulo-seccion">Llamando</h1>
+        <div id="actual" class="actual" aria-live="assertive" aria-atomic="true"></div>
+        <ul id="otros" class="otros" aria-label="Otros llamados"></ul>
+      </section>
+
+      <section class="atendiendo" aria-labelledby="t-atendiendo">
+        <h2 id="t-atendiendo" class="titulo-seccion">En atención</h2>
+        <table>
+          <thead><tr><th>Número</th><th>Fase</th><th>Módulo</th></tr></thead>
+          <tbody id="atendiendo"></tbody>
+        </table>
+        <p id="sin-atendiendo" class="vacio" hidden>Nadie en atención en este momento.</p>
+      </section>
+    </main>
+
+    <p class="conexion" id="conexion" role="status" hidden>Sin conexión. Reintentando…</p>
+  </div>
+
+  <div class="activar" id="activar">
+    <div>
+      <p class="activar-titulo">Pantalla de llamados</p>
+      <p>El navegador solo permite reproducir sonido después de un clic.</p>
+      <button type="button" id="boton-activar">Activar sonido y voz</button>
+      <p><button type="button" class="sin-sonido" id="boton-sin-sonido">Continuar sin sonido</button></p>
+    </div>
+  </div>
+
+  <script type="application/json" id="datos-iniciales">{{ {'proceso': proceso, 'llamando': llamando, 'atendiendo': atendiendo, 'intervalo': intervalo}|tojson }}</script>
+</body>
+</html>

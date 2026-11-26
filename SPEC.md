@@ -460,7 +460,7 @@ Cierre manual:
 - Las carreras de interés.
 - Su recorrido, con:
   - Las fases ya completadas, marcadas con ✓.
-  - La **fase actual**, destacada, con una instrucción clara: *"Dirígete a: Becas"* si está `EN_ESPERA`, o *"Estás siendo atendido en: Becas"* si está `EN_ATENCION`.
+  - La **fase actual**, destacada, con una instrucción clara: *"Dirígete a: Becas"* si está `EN_ESPERA`, o *"Estás siendo atendido en: Becas"* si está `EN_ATENCION`. Si lo llamaron a un módulo, se agrega: *"Dirígete a: Becas, Módulo 3"*; en atención, el módulo del último llamado o, si lo atendieron sin llamarlo, el de quien lo atiende.
   - La **fase siguiente** y el resto de la ruta planificada.
   - No se muestran las fases de consulta que no están en su ruta, ni las observaciones internas, ni los nombres de los responsables.
 - Un mensaje persistente (fijo en pantalla):
@@ -1102,7 +1102,6 @@ stateDiagram-v2
 - **Clonar proceso:** crear "Matrícula 2027" a partir de "Matrícula 2026". Es especialmente útil porque la estructura de un proceso iniciado no se puede modificar.
 - Correo al postulante en cada cambio de fase.
 - Notificaciones por SMS o WhatsApp.
-- Pantalla de llamado de turnos (TV) con el número de atención.
 - Tiempos objetivo de espera y de atención por fase, con alertas en la bandeja y en los reportes.
 - Integración con el sistema académico o financiero para completar fases automáticamente (ej.: Finanzas, al confirmarse un pago).
 

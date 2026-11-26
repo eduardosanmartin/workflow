@@ -23,7 +23,8 @@ def create_app(config_class=Config):
     limiter.init_app(app)
 
     from app.blueprints import (
-        admin, auditoria, auth, bandeja, ficha, iniciar, postulantes, principal, qr, reportes, seguimiento,
+        admin, auditoria, auth, bandeja, ficha, iniciar, pantalla, postulantes, principal, qr, reportes,
+        seguimiento,
     )
     from app.security import cargar_usuario
     from app.services.bandeja import puede_ver as puede_ver_bandeja
@@ -35,7 +36,7 @@ def create_app(config_class=Config):
     from app import cli
     cli.registrar(app)
     for blueprint in (auth, principal, admin, iniciar, bandeja, ficha, postulantes, reportes, auditoria, qr,
-                      seguimiento):
+                      seguimiento, pantalla):
         app.register_blueprint(blueprint.bp)
 
     @app.context_processor
